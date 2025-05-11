@@ -52,6 +52,9 @@ func (a *KeyFrame[T]) EncodeKeyframe() ([]byte, error){
 				buf.Write(encodeAnimString(v, true))
 			case int32:
 				binary.Write(&buf, binary.LittleEndian, v)
+			case int:
+				v32 := int32(v)
+				binary.Write(&buf, binary.LittleEndian, v32)
 			case float32:
 				binary.Write(&buf, binary.LittleEndian, v)
 			default:
@@ -104,6 +107,8 @@ func (a *AnimationTrack[T]) EncodeTrack() ([]byte, error){
 		case string:
 			buf.WriteByte(39) // 39 = String
 		case int32:
+			buf.WriteByte(10) // 10 = Int
+		case int:
 			buf.WriteByte(10) // 10 = Int
 		case float32:
 			buf.WriteByte(21) // 21 = Float

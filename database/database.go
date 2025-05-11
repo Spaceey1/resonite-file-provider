@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"resonite-file-provider/config"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -18,9 +19,15 @@ func Connect() {
 	if err != nil {
 		panic(err)
 	}
-	if err := db.Ping(); err != nil {
-		panic(err)
+	for attempt := 0; attempt < config.GetConfig().Database.MaxTries; attempt++{
+		err := db.Ping()
+		if err == nil {
+			Db = db
+			println("Connected to db")
+			return
+		}
+		println(fmt.Sprintf("Couldn't connect: %s\nDb might still be starting, waiting 5 seconds", err.Error()))
+		time.Sleep(time.Second * 5)
 	}
-	Db = db
-	println("Connected to db")
+	panic(fmt.Sprintf("Couldn't connect to database within %d tries, quitting", config.GetConfig().Database.MaxTries))
 }

@@ -12,23 +12,14 @@ func isOwnedBy(owner int, url string) bool {
 	url = strings.TrimSuffix(url, ".brson")
 	database.Db.QueryRow(`
 	SELECT EXISTS (
-	  SELECT 1 
-	  FROM Users 
-	  WHERE id = ?
-	    AND id IN (
-	      SELECT user_id 
-	      FROM users_inventories 
-	      WHERE inventory_id IN (
-	        SELECT inventory_id 
-	        FROM Folders 
-	        WHERE id IN (
-	          SELECT folder_id 
-	          FROM Items 
-	          WHERE url = ?
-	        )
-	      )
-	    )
-	)
+			SELECT 1 
+			FROM Users u
+			INNER JOIN users_inventories ui ON u.id = ui.user_id
+			INNER JOIN Inventories i ON ui.inventory_id = i.id
+			INNER JOIN Folders f ON f.inventory_id = i.id
+			INNER JOIN Items it ON it.folder_id = f.id
+			WHERE u.id = ? AND it.url = ?
+		)
 	`, owner, url).Scan(&exists)
 	return exists
 }

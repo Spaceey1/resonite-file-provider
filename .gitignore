@@ -5,3 +5,4 @@ certs
 *.animx
 ResoniteFilehost
 server
+mysql-data

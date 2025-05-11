@@ -62,7 +62,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("User registered successfully"))
 }
 func loginHandler(w http.ResponseWriter, r *http.Request) {
-	println(r.Method)
 	username, password, err := readBody(r)
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)

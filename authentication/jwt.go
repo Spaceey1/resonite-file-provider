@@ -1,11 +1,23 @@
 package authentication
 
 import (
-    "time"
-    "github.com/golang-jwt/jwt/v5"
+	"os"
+	"time"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("tempkey")
+var jwtKey = getJWTKey()
+
+func getJWTKey() []byte {
+	if info, err := os.Stat("/run/secrets/jwt.key"); err == nil && !info.IsDir() {
+		file, err := os.ReadFile("/run/secrets/jwt.key")
+		if err != nil {
+			panic("error while reading jwt secret")
+		}
+		return file
+	}
+    panic("JWT_SECRET couldn't be found")
+}
 
 type Claims struct {
     Username string `json:"username"`

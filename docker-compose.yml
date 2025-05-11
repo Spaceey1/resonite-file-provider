@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    container_name: resonite-file-provider
+    restart: always
+    ports:
+      - "5819:5819"  # API port
+    volumes:
+      - ./assets:/app/assets
+      - ./upload-site:/app/upload-site
+      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
+    depends_on:
+      - db
+    environment:
+      - TZ=UTC
+    networks:
+      - resonite-network
+
+  db:
+    image: mysql:8.0
+    container_name: resonite-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: resonite-inventory
+      MYSQL_USER: resonite-inventory
+      MYSQL_PASSWORD: resonitepassword
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+      - ./resonite-inventory-schema.sql:/docker-entrypoint-initdb.d/resonite-inventory-schema.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - resonite-network
+
+networks:
+  resonite-network:
+    driver: bridge

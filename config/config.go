@@ -12,7 +12,6 @@ type Config struct {
 type ServerConfig struct {
 	Host       string
 	Port       int
-	ItemsPath  string
 	AssetsPath string
 }
 
@@ -22,6 +21,7 @@ type DatabaseConfig struct {
 	Host     string
 	Port     int
      	Name     string
+	MaxTries int;
 }
 
 var config Config

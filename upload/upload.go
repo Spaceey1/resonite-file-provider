@@ -115,7 +115,6 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	var assetFilename string
 	var itemName string
-	// first read asset record
 	for _, f := range zipReader.File {
 		file, err := f.Open()
 		if err != nil {
@@ -201,7 +200,11 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read file: ", http.StatusInternalServerError)
 		return
 	}
-	assetUrl := "https://" + filepath.Join(config.GetConfig().Server.Host + ":" + strconv.Itoa(config.GetConfig().Server.Port), "assets")
+	var prefix string = "https://"
+	if r.TLS == nil {
+		prefix = "http://"
+	}
+	assetUrl :=  prefix + filepath.Join(config.GetConfig().Server.Host + ":" + strconv.Itoa(config.GetConfig().Server.Port), "assets")
 	newBrsonData := mapRecursiveReplace(brsonData, "packdb://", assetUrl)
 	newBrson, err := writeBrson(newBrsonData.(map[string]interface{}))
 	os.WriteFile(filepath.Join(config.GetConfig().Server.AssetsPath, assetFilename) + ".brson", newBrson, 0644)
@@ -212,5 +215,6 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 func AddListeners() {
 	http.HandleFunc("/upload", HandleUpload)
 	http.HandleFunc("/addFolder", HandleAddFolder)
-	http.HandleFunc("/removeItem/", HandleRemoveItem)
+	http.HandleFunc("/removeItem", HandleRemoveItem)
+	http.HandleFunc("/addInventory", HandleAddInventory)
 }
