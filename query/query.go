@@ -374,9 +374,9 @@ func searchInventory(w http.ResponseWriter, r *http.Request){
 	if strings.HasPrefix(r.UserAgent(), "Resonite") {
 		response := animxmaker.Animation{
 			Tracks: []animxmaker.AnimationTrackWrapper{
-				animxmaker.ListTrack(itemIds, "results", "id"),
-				animxmaker.ListTrack(itemNames, "results", "name"),
-				animxmaker.ListTrack(itemUrls, "results", "url"),
+				animxmaker.ListTrack(itemIds, "items", "id"),
+				animxmaker.ListTrack(itemNames, "items", "name"),
+				animxmaker.ListTrack(itemUrls, "items", "url"),
 			},
 		}
 		encodedResponse, err := response.EncodeAnimation("response")
@@ -395,7 +395,7 @@ func searchInventory(w http.ResponseWriter, r *http.Request){
 			})
 		}
 		data := map[string]any{
-			"results": items,
+			"items": items,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
