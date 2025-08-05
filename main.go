@@ -33,12 +33,11 @@ func main() {
 	}
 	
 	if 
+	_, err := os.Stat("./certs"); 
+	os.IsNotExist(err) ||
 	config.GetConfig().Server.Host == "localhost" ||
 	config.GetConfig().Server.Host == "0.0.0.0" ||
 	config.GetConfig().Server.Host == "127.0.0.1" {
-		println("Server running locally, running it in http mode")
-		log.Fatal(server.ListenAndServe())
-	}else if _, err := os.Stat("./certs"); os.IsNotExist(err){
 		println("Certs are missing, running server in http mode. Unless this is in a testing enviroment this is highly not recommended")
 		log.Fatal(server.ListenAndServe())
 	}else{

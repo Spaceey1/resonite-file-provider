@@ -68,7 +68,7 @@ func GetSearchResults(query string, inventoryId int) ([]int, []string, []string,
 		`select Items.id, Items.name, Items.url
 		from Items
 		inner join Folders on Items.folder_id = Folders.id
-		where Folders.inventory_id = ? AND INSTR(Items.name, ?)`)
+		where Folders.inventory_id = ? AND INSTR(Items.name, ?)`, inventoryId, query)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"resonite-file-provider/authentication"
 	"resonite-file-provider/config"
 	"resonite-file-provider/database"
+	"resonite-file-provider/query"
 	"strconv"
 	"strings"
 
@@ -90,6 +92,16 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	auth := r.URL.Query().Get("auth")
+	claims, err := authentication.ParseToken(auth)
+	if err != nil {
+		http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+		return
+	}
+	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 	file, header, err := r.FormFile("file")

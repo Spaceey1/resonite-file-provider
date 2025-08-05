@@ -6,6 +6,6 @@ port = 3306
 name = "resonite-inventory"
 maxTries = 10
 [Server]
-host = "localhost"
+host = "localhost" #change me!
 port =  5819
 assetsPath = "./assets"
