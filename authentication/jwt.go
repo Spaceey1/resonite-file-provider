@@ -9,7 +9,9 @@ import (
 var jwtKey = getJWTKey()
 
 func getJWTKey() []byte {
-	if info, err := os.Stat("/run/secrets/jwt.key"); err == nil && !info.IsDir() {
+	if key := os.Getenv("JWT_SECRET_KEY"); key != "" {
+        return []byte(key)
+    } else if info, err := os.Stat("/run/secrets/jwt.key"); err == nil && !info.IsDir() {
 		file, err := os.ReadFile("/run/secrets/jwt.key")
 		if err != nil {
 			panic("error while reading jwt secret")
