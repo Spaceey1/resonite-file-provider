@@ -37,10 +37,12 @@ func main() {
 	os.IsNotExist(err) ||
 	config.GetConfig().Server.Host == "localhost" ||
 	config.GetConfig().Server.Host == "0.0.0.0" ||
-	config.GetConfig().Server.Host == "127.0.0.1" {
-		println("Certs are missing, running server in http mode. Unless this is in a testing enviroment this is highly not recommended")
+	config.GetConfig().Server.Host == "127.0.0.1" ||
+    os.Getenv("BEHIND_PROXY") == true {
+		println("HTTP Mode is running. Unless testing or behind a Reverse Proxy this is not recomended!")
 		log.Fatal(server.ListenAndServe())
 	}else{
+		println("HTTPS Mode is running.")
 		log.Fatal(server.ListenAndServeTLS("certs/fullchain.pem", "certs/privkey.pem"))
 	}
 }
