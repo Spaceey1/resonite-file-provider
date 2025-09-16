@@ -86,7 +86,7 @@ func readBrson(data []byte) (map[string]any, error) {
 	return doc, nil
 }
 
-func HandleUpload(w http.ResponseWriter, r *http.Request) {
+func handleUpload(w http.ResponseWriter, r *http.Request) {
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
 		http.Error(w, "folderId missing or invalid", http.StatusBadRequest)
@@ -96,7 +96,34 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-	auth := r.URL.Query().Get("auth")
+	// Log cookies
+	cookies := r.Cookies()
+	fmt.Println("[FOLDER] Request cookies:", cookies)
+	var auth string
+	// First try cookie (preferred)
+	authCookie, err := r.Cookie("auth_token")
+	if err == nil {
+		auth = authCookie.Value
+		fmt.Println("[FOLDER] Found auth_token cookie:", auth[:10]+"...")
+	} else {
+		// Fallback to query parameter
+		auth = r.URL.Query().Get("auth")
+		if auth != "" {
+			fmt.Println("[FOLDER] Found auth in query param:", auth[:10]+"...")
+		}
+	}
+	if auth == "" {
+		// Log debug information
+		fmt.Println("[FOLDER] No auth token found in cookie or query param")
+
+		// Return JSON error instead of HTML error
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Auth token missing",
+		})
+		return
+	}
 	claims, err := authentication.ParseToken(auth)
 	if err != nil {
 		http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
@@ -227,8 +254,8 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddListeners() {
-	http.HandleFunc("/upload", HandleUpload)
-	http.HandleFunc("/addFolder", HandleAddFolder)
-	http.HandleFunc("/removeItem", HandleRemoveItem)
-	http.HandleFunc("/addInventory", HandleAddInventory)
+	http.HandleFunc("/upload", handleUpload)
+	http.HandleFunc("/addFolder", handleAddFolder)
+	http.HandleFunc("/removeItem", handleRemoveItem)
+	http.HandleFunc("/addInventory", handleAddInventory)
 }

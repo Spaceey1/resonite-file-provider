@@ -76,12 +76,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             elements.inventoryTree.innerHTML = '';
             
-            if (data.data.length === 0) {
+            if (data.results.length === 0) {
                 elements.inventoryTree.innerHTML = '<p class="empty-folder">No inventories found</p>';
                 return;
             }
             
-            data.data.forEach(inventory => {
+            data.results.forEach(inventory => {
                 const inventoryElement = document.createElement('div');
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;

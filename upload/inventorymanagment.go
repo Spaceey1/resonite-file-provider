@@ -59,7 +59,7 @@ func AddFolder(parentFolderID int, folderName string) (int64, error) {
 	return newFolderId, nil
 }
 
-func HandleAddFolder(w http.ResponseWriter, r *http.Request) {
+func handleAddFolder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
@@ -164,7 +164,7 @@ func HandleAddFolder(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func HandleAddInventory(w http.ResponseWriter, r *http.Request) {
+func handleAddInventory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INVENTORY] AddInventory request received:", r.Method, r.URL.String())
 	fmt.Println("[INVENTORY] Request headers:", r.Header)
 	if r.Method != http.MethodPost {
@@ -290,7 +290,7 @@ func RemoveItem(itemId int) error {
 //
 //}
 
-func HandleRemoveItem(w http.ResponseWriter, r *http.Request) {
+func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[ITEM] RemoveItem request received:", r.Method, r.URL.String())
 	fmt.Println("[ITEM] Request headers:", r.Header)
 	if r.Method != http.MethodPost {
