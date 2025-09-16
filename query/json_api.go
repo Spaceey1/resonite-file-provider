@@ -61,80 +61,6 @@ type FolderContentsResponse struct {
 
 // Handler for JSON API endpoints for web interface
 
-
-// listItemsJSON handles GET /api/folders/items
-func listItemsJSON(w http.ResponseWriter, r *http.Request) {
-	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
-	if err != nil {
-		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
-		return
-	}
-	
-	// Try to get auth token from multiple sources
-	var authKey string
-	
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-	
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	
-	// Check if user has access to this folder
-	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
-		http.Error(w, "You don't have access to this folder", http.StatusForbidden)
-		return
-	}
-	
-	// Set JSON content type
-	w.Header().Set("Content-Type", "application/json")
-	
-	// Get items
-	items, err := database.Db.Query("SELECT id, name, url FROM Items WHERE folder_id = ?", folderId)
-	if err != nil {
-		response := ItemsResponse{
-			Success: false,
-			Data:    nil,
-		}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	defer items.Close()
-	
-	var itemList []ItemListItem
-	for items.Next() {
-		var id int
-		var name string
-		var url string
-		items.Scan(&id, &name, &url)
-		itemList = append(itemList, ItemListItem{
-			ID:   id,
-			Name: name,
-			URL:  "assets/" + url,
-		})
-	}
-	
-	response := ItemsResponse{
-		Success: true,
-		Data:    itemList,
-	}
-	
-	json.NewEncoder(w).Encode(response)
-}
-
 // getInventoryRootFolder handles GET /api/inventory/rootFolder
 func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
     inventoryId, err := strconv.Atoi(r.URL.Query().Get("inventoryId"))
@@ -214,6 +140,5 @@ func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
 
 // AddJSONAPIListeners registers the JSON API endpoints
 func AddJSONAPIListeners() {
-	http.HandleFunc("/api/folders/items", listItemsJSON)
 	http.HandleFunc("/api/inventory/rootFolder", getInventoryRootFolderAPI)
 }
