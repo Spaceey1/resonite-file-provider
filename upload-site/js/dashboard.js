@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.inventoryTree.innerHTML = '<div class="loading-spinner"></div>';
             
             console.log("Fetching inventories from API");
-            const response = await fetch(`/api/inventories`, {
+            const response = await fetch(`/query/inventories`, {
                 method: 'GET',
                 credentials: 'include', // Include cookies automatically
                 headers: {
@@ -135,26 +135,26 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.inventoryTree.innerHTML = '';
             
             // Check if data.data exists and is an array
-            if (!data.data || !Array.isArray(data.data)) {
+            if (!data.results || !Array.isArray(data.results)) {
                 console.error("Invalid data structure:", data);
                 elements.inventoryTree.innerHTML = '<p class="empty-folder">Invalid inventory data received</p>';
                 return;
             }
             
             // Check if there are any inventories
-            if (data.data.length === 0) {
+            if (data.results.length === 0) {
                 console.log("No inventories found");
                 elements.inventoryTree.innerHTML = '<p class="empty-folder">No inventories found</p>';
                 return;
             }
             
             // Render each inventory
-            console.log("Rendering", data.data.length, "inventories");
-            data.data.forEach(inventory => {
+            console.log("Rendering", data.results.length, "inventories");
+            data.results.forEach(inventory => {
                 const inventoryElement = document.createElement('div');
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
-                inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
+                //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
                 inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}`;
                 
                 inventoryElement.addEventListener('click', () => {
