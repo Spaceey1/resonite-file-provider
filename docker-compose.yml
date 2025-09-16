@@ -8,8 +8,7 @@ services:
       JWT_SECRET_KEY: "TestkeyPLSCHANGEME!!!!!"
       TZ: "UTC"
     ports:
-      - "5819:5819"  # API port. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
-      - "8080:8080" # Web panel port. if you are reverse proxying you can infact merge this to the root of the reverse proxy, they should not collide with eachother.
+      - "5819:5819"  # Server. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
     volumes:
       - ./assets:/app/assets
       - ./upload-site:/app/upload-site

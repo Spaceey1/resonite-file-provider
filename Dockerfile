@@ -37,6 +37,6 @@ RUN mkdir -p ./certs
 
 # Expose ports
 EXPOSE 5819
-EXPOSE 8080
+# EXPOSE 8080
 
 CMD ["./resonite-file-provider"]

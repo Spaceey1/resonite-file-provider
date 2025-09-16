@@ -47,7 +47,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	// Check for auth token
 	var authToken string
-	
+
 	// First try to get from cookie (preferred method)
 	authCookie, err := r.Cookie("auth_token")
 	if err == nil {
@@ -59,7 +59,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("[DASHBOARD] Request from: %s, User-Agent: %s\n", r.RemoteAddr, r.UserAgent())
 	fmt.Printf("[DASHBOARD] Cookies: %v\n", r.Cookies())
-	
+
 	// Validate token
 	if authToken != "" {
 		claims, err := authentication.ParseToken(authToken)
@@ -71,19 +71,19 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 					Value:    authToken,
 					Path:     "/",
 					MaxAge:   86400, // 1 day
-					HttpOnly: false,  // Allow JavaScript access for debugging
+					HttpOnly: false, // Allow JavaScript access for debugging
 					SameSite: http.SameSiteLaxMode,
 				})
 			}
-			
+
 			// Debug logging
 			fmt.Printf("[DASHBOARD] Valid auth for user %s, serving dashboard\n", claims.Username)
-			
+
 			// Add security headers to prevent caching
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 			w.Header().Set("Pragma", "no-cache")
 			w.Header().Set("Expires", "0")
-			
+
 			// Token is valid, serve dashboard
 			http.ServeFile(w, r, filepath.Join("upload-site", "dashboard.html"))
 			return
@@ -272,7 +272,7 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 		MaxAge: -1,
 	})
-	
+
 	// Redirect to login page
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
@@ -298,19 +298,18 @@ func StartWebServer() {
 		os.Mkdir(jsPath, 0755)
 	}
 
-    // Set up routes with logging
+	// Set up routes with logging
 	http.HandleFunc("/", logRequest(handleWebHome))
 	http.HandleFunc("/login", logRequest(handleLogin))
 	http.HandleFunc("/dashboard", logRequest(handleDashboard))
 	http.HandleFunc("/folder", logRequest(handleFolder))
 	http.HandleFunc("/logout", logRequest(handleLogout))
-	
-	
+
 	// Static files
 	http.HandleFunc("/styles.css", handleStatic)
 	http.HandleFunc("/js/", handleStatic)
 
 	// Start the web server
-	fmt.Println("Starting web server on :8080...")
-	http.ListenAndServe(":8080", nil)
+	//fmt.Println("Starting web server on :8080...")
+	//http.ListenAndServe(":8080", nil)
 }
