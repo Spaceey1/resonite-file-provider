@@ -248,4 +248,5 @@ Response: AnimX encoded data
 docker-compose up -d
 ```
 
-Server runs on port 8080 by default.
+API Runs on 5819 by default. If you change the port in config.toml (which if you want to do port 443 which is default https port) you will need to update the internal facing port for the docker container to be the port you choose for config.toml
+
