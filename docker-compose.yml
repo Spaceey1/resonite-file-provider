@@ -14,8 +14,6 @@ services:
 #      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
     depends_on:
       - db
-    environment:
-      - TZ=UTC
     networks:
       - resonite-network
 
