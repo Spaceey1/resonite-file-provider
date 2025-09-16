@@ -184,7 +184,7 @@ func listFoldersJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	
 	// Get child folders
-	childFolders, err := database.Db.Query("SELECT id, name FROM Folders WHERE parent_folder_id = ?", folderId)
+	childFolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
 		response := FoldersResponse{
 			Success: false,
@@ -483,8 +483,8 @@ func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
     // Get the root folder ID
     var rootFolderId int
     err = database.Db.QueryRow(
-        "SELECT id FROM Folders WHERE inventory_id = ? AND parent_folder_id IS NULL LIMIT 1",
-        inventoryId,
+        "SELECT id FROM Folders WHERE `inventory_id` = ? AND parent_folder_id = -1",
+		inventoryId,
     ).Scan(&rootFolderId)
     
     if err != nil {
