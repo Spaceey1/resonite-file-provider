@@ -127,9 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Check if the request was successful
-            if (!data.success) {
-                throw new Error('API reported failure: ' + (data.error || 'Unknown error'));
-            }
+            //if (!data.success) {
+            //    throw new Error('API reported failure: ' + (data.error || 'Unknown error'));
+            //}
             
             // Clear the loading spinner
             elements.inventoryTree.innerHTML = '';
