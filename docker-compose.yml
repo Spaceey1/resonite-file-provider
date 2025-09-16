@@ -3,12 +3,15 @@ services:
     build: .
     container_name: resonite-file-provider
     restart: always
+    environment:
+      BEHIND_PROXY: false
+      JWT_SECRET_KEY: "TestkeyPLSCHANGEME!!!!!"
     ports:
-      - "5819:5819"  # API port
+      - "5819:5819"  # API port. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
     volumes:
       - ./assets:/app/assets
       - ./upload-site:/app/upload-site
-      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
+#      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
     depends_on:
       - db
     environment:
