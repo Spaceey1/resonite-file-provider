@@ -74,42 +74,42 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	var storedHash string
 	var uId int
 	err = database.Db.QueryRow("SELECT auth, id FROM Users WHERE username = ?", username).Scan(&storedHash, &uId)
-    	if err == sql.ErrNoRows {
-    	    http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-    	    return
-    	} else if err != nil {
-    	    http.Error(w, "Server error", http.StatusInternalServerError)
-    	    fmt.Println("Query error:", err)
-    	    return
-    	}
+	if err == sql.ErrNoRows {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	} else if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Query error:", err)
+		return
+	}
 	if err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password)); err != nil {
-        	http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-        	return
-    	}
-	token, err := GenerateToken(username, uId);
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+	token, err := GenerateToken(username, uId)
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)
 	}
-	
+
 	// Set the auth token as a cookie with detailed settings for troubleshooting
 	cookie := &http.Cookie{
 		Name:     "auth_token",
 		Value:    token,
 		Path:     "/",
 		MaxAge:   86400, // 1 day
-		HttpOnly: false,  // Allow JavaScript access for debugging
+		HttpOnly: false, // Allow JavaScript access for debugging
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false,  // Since we're in development
+		Secure:   false, // Since we're in development
 	}
-	
+
 	http.SetCookie(w, cookie)
-	
+
 	// Log the cookie details
-	fmt.Printf("[AUTH] Setting cookie: %s=%s; Path=%s; MaxAge=%d; HttpOnly=%t; SameSite=%v\n", 
+	fmt.Printf("[AUTH] Setting cookie: %s=%s; Path=%s; MaxAge=%d; HttpOnly=%t; SameSite=%v\n",
 		cookie.Name, cookie.Value[:10]+"...", cookie.Path, cookie.MaxAge, cookie.HttpOnly, cookie.SameSite)
-	
+
 	fmt.Printf("[AUTH] Login successful for user: %s\n", username)
-	
+
 	// Also return the token in the response body for non-browser clients
 	w.Write([]byte(token))
 }
@@ -118,6 +118,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Handle logout logic here
 	w.Write([]byte("Logout handler"))
 }
+
 // Call this before starting the server
 func AddAuthListeners() {
 	http.HandleFunc("/auth/login", loginHandler)
