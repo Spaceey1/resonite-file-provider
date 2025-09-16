@@ -13,7 +13,7 @@ import (
 	"resonite-file-provider/config"
 	"resonite-file-provider/database"
 	"resonite-file-provider/query"
-	"resonite-file-provider/envasbool"
+	"resonite-file-provider/environment"
 
 	"strconv"
 	"strings"
@@ -215,7 +215,7 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var prefix string = "https://"
-	if r.TLS == nil && !envasbool.GetEnvAsBool("BEHIND_PROXY", false) {
+	if r.TLS == nil && !environment.GetEnvAsBool("BEHIND_PROXY", false) {
 		prefix = "http://"
 	}
 	assetUrl :=  prefix + filepath.Join(config.GetConfig().Server.Host + ":" + strconv.Itoa(config.GetConfig().Server.Port), "assets")
