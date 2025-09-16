@@ -2,6 +2,7 @@ package query
 
 import (
 	"encoding/json"
+	"database/sql"
 	"net/http"
 	"path/filepath"
 	"resonite-file-provider/animxmaker"
@@ -169,9 +170,27 @@ func listFolders(w http.ResponseWriter, r *http.Request) {
 				"id":   ids[i],
 			})
 		}
+					// Get parent folder info
+		var parentInfo *ParentFolderInfo
+		var parentID sql.NullInt64
+		var parentName sql.NullString
+	
+		err = database.Db.QueryRow(`
+			SELECT parent_folder_id, 
+		       (SELECT name FROM Folders WHERE id = f.parent_folder_id) as parent_name
+			FROM Folders f 
+			WHERE id = ?
+		`, folderId).Scan(&parentID, &parentName)
+	
+		if err == nil && parentID.Valid && parentName.Valid {
+			parentInfo = &ParentFolderInfo{
+				ID:   int(parentID.Int64),
+				Name: parentName.String,
+			}
+		}
 		data := map[string]any{
 			"results":  items,
-			"parentId": parentID,
+			"parentId": parentInfo,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
@@ -379,10 +398,28 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 				"name": folderNamesTrack[i],
 			})
 		}
+			// Get parent folder info
+		var parentInfo *ParentFolderInfo
+		var parentID sql.NullInt64
+		var parentName sql.NullString
+	
+		err = database.Db.QueryRow(`
+			SELECT parent_folder_id, 
+		       (SELECT name FROM Folders WHERE id = f.parent_folder_id) as parent_name
+			FROM Folders f 
+			WHERE id = ?
+		`, folderId).Scan(&parentID, &parentName)
+	
+		if err == nil && parentID.Valid && parentName.Valid {
+			parentInfo = &ParentFolderInfo{
+				ID:   int(parentID.Int64),
+				Name: parentName.String,
+			}
+		}
 		data := map[string]any{
 			"items":   items,
 			"folders": folders,
-			"parent":  parentFolder,
+			"parent":  parentInfo,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)

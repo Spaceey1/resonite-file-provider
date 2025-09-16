@@ -26,7 +26,7 @@ Response: Success message (string)
 
 #### List Inventories
 ```
-GET /api/inventories
+GET /query/inventories
 ```
 Query Parameters:
 - `auth`: JWT token
@@ -34,12 +34,10 @@ Query Parameters:
 Response:
 ```json
 {
-  "success": bool,
-  "data": [
+  "results": [
     {
       "id": int,
-      "name": string,
-      "rootFolderId": int
+      "name": string
     },
     ...
   ]
@@ -83,7 +81,7 @@ Response:
 
 #### List Folder Contents
 ```
-GET /api/folders/contents
+GET /query/folderContent
 ```
 Query Parameters:
 - `auth`: JWT token
@@ -92,7 +90,6 @@ Query Parameters:
 Response:
 ```json
 {
-  "success": bool,
   "folders": [
     {
       "id": int,
@@ -117,7 +114,7 @@ Response:
 
 #### List Subfolders
 ```
-GET /api/folders/subfolders
+GET /query/childFolders
 ```
 Query Parameters:
 - `auth`: JWT token
@@ -143,7 +140,7 @@ Response:
 
 #### List Items in Folder
 ```
-GET /api/folders/items
+GET /query/childItems
 ```
 Query Parameters:
 - `auth`: JWT token
@@ -152,7 +149,6 @@ Query Parameters:
 Response:
 ```json
 {
-  "success": bool,
   "data": [
     {
       "id": int,
