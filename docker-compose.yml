@@ -6,6 +6,7 @@ services:
     environment:
       BEHIND_PROXY: false
       JWT_SECRET_KEY: "TestkeyPLSCHANGEME!!!!!"
+      TZ: "UTC"
     ports:
       - "5819:5819"  # API port. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
     volumes:
