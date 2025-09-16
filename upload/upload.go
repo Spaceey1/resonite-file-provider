@@ -213,7 +213,7 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var prefix string = "https://"
-	if r.TLS == nil {
+	if r.TLS == nil && os.Getenv("BEHIND_PROXY") == false {
 		prefix = "http://"
 	}
 	assetUrl :=  prefix + filepath.Join(config.GetConfig().Server.Host + ":" + strconv.Itoa(config.GetConfig().Server.Port), "assets")
