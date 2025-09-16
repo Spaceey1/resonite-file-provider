@@ -13,7 +13,8 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o resonite-file-provider . #-buildvcs=false
+RUN CGO_ENABLED=0 GOOS=linux go build -o resonite-file-provider . 
+# -buildvcs=false
 # Final stage
 FROM alpine:latest
 
@@ -36,5 +37,6 @@ RUN mkdir -p ./certs
 
 # Expose ports
 EXPOSE 5819
+EXPOSE 8080
 
 CMD ["./resonite-file-provider"]

@@ -33,6 +33,8 @@ func main() {
 		},
 	}
 	
+    go upload.StartWebServer()
+
 	if 
 	_, err := os.Stat("./certs"); 
 	os.IsNotExist(err) ||
