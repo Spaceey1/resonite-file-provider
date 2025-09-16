@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             console.log("Fetching folder contents from API");
-            const response = await fetch(`/api/folders/contents?folderId=${folderId}`, {
+            const response = await fetch(`/query/folderContent?folderId=${folderId}`, {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
@@ -227,9 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error("Invalid JSON response from folder API");
             }
             
-            if (!data.success) {
-                throw new Error("API reported failure: " + (data.error || "Unknown error"));
-            }
+            //if (!data.success) {
+            //    throw new Error("API reported failure: " + (data.error || "Unknown error"));
+            //}
             
             // Render subfolders
             renderFolders(data.folders || []);

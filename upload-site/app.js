@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.inventoryTree.innerHTML = '<div class="loading-spinner"></div>';
             
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`/api/inventories?auth=${token}`);
+            const response = await fetch(`/query/inventories?auth=${token}`);
             
             if (!response.ok) {
                 throw new Error(`Failed to load inventories: ${response.status}`);
@@ -122,18 +122,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             
-            if (!data.success) {
-                throw new Error('Failed to load inventories');
-            }
+            //if (!data.success) {
+            //    throw new Error('Failed to load inventories');
+            //}
             
             elements.inventoryTree.innerHTML = '';
             
-            if (data.data.length === 0) {
+            if (data.result.length === 0) {
                 elements.inventoryTree.innerHTML = '<p class="empty-folder">No inventories found</p>';
                 return;
             }
             
-            data.data.forEach(inventory => {
+            data.result.forEach(inventory => {
                 const inventoryElement = document.createElement('div');
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.itemsContainer.innerHTML = '<div class="loading-spinner"></div>';
             
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`/api/folders/contents?folderId=${folderId}&auth=${token}`);
+            const response = await fetch(`/query/folderContent?folderId=${folderId}&auth=${token}`);
             
             if (!response.ok) {
                 throw new Error(`Failed to load folder contents: ${response.status}`);
@@ -178,9 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             
-            if (!data.success) {
-                throw new Error('Failed to load folder contents');
-            }
+            //if (!data.success) {
+            //    throw new Error('Failed to load folder contents');
+            //}
             
             // Update folder tree
             elements.folderTree.innerHTML = '';
@@ -308,12 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add current folder if not root
             if (folderId !== 1) {
                 // Get folder name
-                const response = await fetch(`/api/folders/subfolders?folderId=${folderId}&auth=${token}`);
+                const response = await fetch(`/query/childFolders?folderId=${folderId}&auth=${token}`);
                 
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (data.success) {
                         // Add separator
                         const separator = document.createElement('span');
                         separator.className = 'breadcrumb-separator';
@@ -327,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // For now, use a placeholder
                         currentFolder.textContent = 'Current Folder';
                         elements.breadcrumbs.appendChild(currentFolder);
-                    }
+                    
                 }
             }
             

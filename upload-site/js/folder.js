@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('authToken') || 
                           (new URLSearchParams(window.location.search)).get('auth');
                           
-            const response = await fetch(`/api/inventories?auth=${token}`);
+            const response = await fetch(`/query/inventories?auth=${token}`);
             
             if (!response.ok) {
                 throw new Error(`Failed to load inventories: ${response.status}`);
@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             
-            if (!data.success) {
-                throw new Error('Failed to load inventories');
-            }
+            //if (!data.success) {
+            //    throw new Error('Failed to load inventories');
+            //}
             
             elements.inventoryTree.innerHTML = '';
             
