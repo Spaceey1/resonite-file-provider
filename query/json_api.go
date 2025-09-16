@@ -427,7 +427,7 @@ func listFolderContentsJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 // getInventoryRootFolder handles GET /api/inventory/rootFolder
-func getInventoryRootFolder(w http.ResponseWriter, r *http.Request) {
+func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
     inventoryId, err := strconv.Atoi(r.URL.Query().Get("inventoryId"))
     if err != nil {
         http.Error(w, "inventoryId is either not specified or is invalid", http.StatusBadRequest)
@@ -509,5 +509,5 @@ func AddJSONAPIListeners() {
 	http.HandleFunc("/api/folders/subfolders", listFoldersJSON)
 	http.HandleFunc("/api/folders/items", listItemsJSON)
 	http.HandleFunc("/api/folders/contents", listFolderContentsJSON)
-	http.HandleFunc("/api/inventory/rootFolder", getInventoryRootFolder)
+	http.HandleFunc("/api/inventory/rootFolder", getInventoryRootFolderAPI)
 }
