@@ -298,15 +298,13 @@ func StartWebServer() {
 		os.Mkdir(jsPath, 0755)
 	}
 
-// Set up routes with logging
+    // Set up routes with logging
 	http.HandleFunc("/", logRequest(handleWebHome))
 	http.HandleFunc("/login", logRequest(handleLogin))
 	http.HandleFunc("/dashboard", logRequest(handleDashboard))
 	http.HandleFunc("/folder", logRequest(handleFolder))
 	http.HandleFunc("/logout", logRequest(handleLogout))
 	
-	// Register inventory endpoint only (the others are in upload.go)
-	http.HandleFunc("/addInventory", logRequest(HandleAddInventory))
 	
 	// Static files
 	http.HandleFunc("/styles.css", handleStatic)
