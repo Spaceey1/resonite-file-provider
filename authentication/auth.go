@@ -26,6 +26,9 @@ func readBody(r *http.Request) (string, string, error) {
 	bodyString := string(body)
 	// Non standard way to read the body for ease of use in Resonite
 	creds := strings.Split(bodyString, "\n")
+	if len(creds) < 2 {
+		return "", "", fmt.Errorf("invalid credentials format")
+	}
 	username := creds[0]
 	password := creds[1]
 	return username, password, nil
@@ -88,6 +91,26 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Server error", http.StatusInternalServerError)
 	}
 	
+	// Set the auth token as a cookie with detailed settings for troubleshooting
+	cookie := &http.Cookie{
+		Name:     "auth_token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   86400, // 1 day
+		HttpOnly: false,  // Allow JavaScript access for debugging
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,  // Since we're in development
+	}
+	
+	http.SetCookie(w, cookie)
+	
+	// Log the cookie details
+	fmt.Printf("[AUTH] Setting cookie: %s=%s; Path=%s; MaxAge=%d; HttpOnly=%t; SameSite=%v\n", 
+		cookie.Name, cookie.Value[:10]+"...", cookie.Path, cookie.MaxAge, cookie.HttpOnly, cookie.SameSite)
+	
+	fmt.Printf("[AUTH] Login successful for user: %s\n", username)
+	
+	// Also return the token in the response body for non-browser clients
 	w.Write([]byte(token))
 }
 
