@@ -155,7 +155,6 @@ func handleAddFolder(w http.ResponseWriter, r *http.Request) {
 		// Return success response
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success":  true,
 			"folderId": newFolderId,
 			"name":     folderName,
 			"parentId": folderId,

@@ -702,9 +702,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         throw new Error("Invalid JSON response: " + responseText.substring(0, 100) + "...");
                     }
                     
-                    if (!data.success) {
-                        throw new Error('Server returned error: ' + (data.error || 'Unknown error'));
-                    }
+                    //if (!data.success) {
+                    //    throw new Error('Server returned error: ' + (data.error || 'Unknown error'));
+                    //}
                     
                     // Show success message
                     alert("Folder created successfully!");
@@ -781,9 +781,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     console.log("Inventory creation result:", data);
                     
-                    if (!data.success) {
-                        throw new Error('Server returned error: ' + (data.error || 'Unknown error'));
-                    }
+                    //if (!data.success) {
+                    //    throw new Error('Server returned error: ' + (data.error || 'Unknown error'));
+                    //}
                     
                     // Show success message
                     alert("Inventory created successfully!");
