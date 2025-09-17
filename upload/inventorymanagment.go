@@ -308,7 +308,7 @@ func RemoveItem(itemId int) error {
 }
 func RemoveFolder(folderId int) error {
 	var affectedFolders []int
-	folders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId)
+	folders, err := database.Db.Query("SELECT id FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
 		return err
 	}
