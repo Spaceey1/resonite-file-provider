@@ -1,5 +1,5 @@
 #
-name: Demo Push
+name: Docker Build
 
 # This workflow runs when any of the following occur:
 # - A push is made to a branch called `main` or `seed`
@@ -15,7 +15,7 @@ on:
   pull_request:
   # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
 env:
-  IMAGE_NAME: ghtoken_product_demo
+  IMAGE_NAME: resonite-file-provider
 #
 jobs:
   # This pushes the image to GitHub Packages.
