@@ -345,7 +345,7 @@ func RemoveFolder(folderId int) error {
 			affectedItems = append(affectedItems, itemId)
 		}
 		for _, item := range affectedItems {
-			RemoveItem(item)
+			err := RemoveItem(item)
 			if err != nil {
 				return err
 			}
