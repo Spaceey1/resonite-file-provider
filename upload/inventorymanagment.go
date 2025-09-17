@@ -351,6 +351,12 @@ func RemoveFolder(folderId int) error {
 			}
 		}
 	}
+	for _, folder := range affectedFolders {
+		_, err = database.Db.Exec("DELETE FROM Folders WHERE id = ?", folder)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
@@ -361,7 +367,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("[FOLDER] Invalid method:", r.Method)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Invalid request method",
+			"error": "Invalid request method",
 		})
 		println(r.Method)
 		return
@@ -393,7 +399,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		// Return JSON error instead of HTML error
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Auth token missing",
+			"error": "Auth token missing",
 		})
 		return
 	}
@@ -405,7 +411,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		// Return JSON error instead of HTML error
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Auth token invalid: " + err.Error(),
+			"error": "Auth token invalid: " + err.Error(),
 		})
 		return
 	}
@@ -417,7 +423,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("[FOLDER] Invalid folder ID:", err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "folderId missing or invalid",
+			"error": "folderId missing or invalid",
 		})
 		return
 	}
@@ -426,7 +432,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("[FOLDER] Error finding folder in database:", err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Folder not found: " + err.Error(),
+			"error": "Folder not found: " + err.Error(),
 		})
 		return
 	}
@@ -436,7 +442,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("[FOLDER] Error removing folder:", err.Error())
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":   "Failed to remove folder: " + err.Error(),
+			"error": "Failed to remove folder: " + err.Error(),
 		})
 		return
 	}
