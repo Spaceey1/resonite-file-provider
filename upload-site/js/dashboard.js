@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Add the folders to the items container
-        console.log(elements.itemsContainer.appendChild(folderContainer));
+        elements.folderTree.appendChild(folderContainer);
         
         // If we have no folders and no items, show empty message
         if (!hasItems && (!elements.itemsContainer.querySelector('.item'))) {
