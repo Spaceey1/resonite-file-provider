@@ -7,11 +7,10 @@ name: Docker Build
 # - A pull request is created or updated
 on:
   push:
-    branches:
-      - main
-    tags:
-      - v*
+    branches: [ "master" ]
+    tags: ["v*"]
   pull_request:
+    branches: [ "master" ]
   # This creates an environment variable called `IMAGE_NAME ` with the value `ghtoken_product_demo`.
 env:
   IMAGE_NAME: resonite-file-provider
