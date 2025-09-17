@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     inventoryElement.classList.add('active');
                 });
                 // Add event listeners for item actions
-                const deleteButton = invetoryElement.querySelector('.delete-item');
+                const deleteButton = inventoryElement.querySelector('.delete-item');
                 if (deleteButton) {
                     deleteButton.addEventListener('click', (e) => {
                         e.stopPropagation();
