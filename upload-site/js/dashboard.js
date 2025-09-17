@@ -155,8 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
                 //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
-                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}`;
-                
+                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name} <button class="btn btn-small btn-danger delete-item" data-id="${inventory.id}"><i class="fas fa-trash"></i></button>`;     
                 inventoryElement.addEventListener('click', () => {
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
@@ -167,6 +166,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     inventoryElement.classList.add('active');
                 });
+                // Add event listeners for item actions
+                const deleteButton = itemElement.querySelector('.delete-item');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Show delete confirmation
+                        showDeleteConfirmation(inventory.id, inventory.name, 'inventory');
+                    });
+                }
                 
                 elements.inventoryTree.appendChild(inventoryElement);
             });
@@ -502,6 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         url = `/removeItem?itemId=${id}`;
                     } else if (type === 'folder') {
                         url = `/removeFolder?folderId=${id}`;
+                    } else if (type === 'inventory') {
+                        url = `/removeInventory?inventoryId=${id}`;
                     }
                     
                     const response = await fetch(url, {

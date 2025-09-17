@@ -257,5 +257,6 @@ func AddListeners() {
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/addFolder", handleAddFolder)
 	http.HandleFunc("/removeItem", handleRemoveItem)
+	http.HandleFunc("/removeFolder", handleRemoveFolder)
 	http.HandleFunc("/addInventory", handleAddInventory)
 }

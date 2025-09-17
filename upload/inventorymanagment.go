@@ -306,11 +306,143 @@ func RemoveItem(itemId int) error {
 	}
 	return nil
 }
+func RemoveFolder(folderId int) error {
+	var affectedFolders []int
+	folders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId)
+	if err != nil {
+		return err
+	}
+	for folders.Next() {
+		var id int
+		folders.Scan(&id)
+		affectedFolders = append(affectedFolders, id)
+	}
+	for i := 0; i < len(affectedFolders); i++ {
+		folders := affectedFolders[i]
+		subfolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folders)
+		if err != nil {
+			return err
+		}
+		var subfolderIds []int
+		for subfolders.Next() {
+			var id int
+			subfolders.Scan(&id)
+			subfolderIds = append(subfolderIds, id)
+		}
+		for _, subfolder := range subfolderIds {
+			affectedFolders = append(affectedFolders, subfolder)
+		}
+	}
+	for _, folder := range affectedFolders {
+		var affectedItems []int
+		items, err := database.Db.Query("SELECT id FROM Items where folder_id = ?", folder)
+		if err != nil {
+			return err
+		}
+		for items.Next() {
+			var itemId int
+			items.Scan(&itemId)
+			affectedItems = append(affectedItems, itemId)
+		}
+		for _, item := range affectedItems {
+			RemoveItem(item)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("[FOLDER] RemoveFolder request received:", r.Method, r.URL.String())
+	fmt.Println("[FOLDER] Request headers:", r.Header)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		fmt.Println("[FOLDER] Invalid method:", r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Invalid request method",
+		})
+		println(r.Method)
+		return
+	}
+	// Log cookies
+	cookies := r.Cookies()
+	fmt.Println("[FOLDER] Request cookies:", cookies)
 
-//func removeFolder(folderId int) error {
-//
-//}
+	// Try to get auth token from multiple sources
+	var auth string
 
+	// First try cookie (preferred)
+	authCookie, err := r.Cookie("auth_token")
+	if err == nil {
+		auth = authCookie.Value
+		fmt.Println("[FOLDER] Found auth_token cookie:", auth[:10]+"...")
+	} else {
+		// Fallback to query parameter
+		auth = r.URL.Query().Get("auth")
+		if auth != "" {
+			fmt.Println("[FOLDER] Found auth in query param:", auth[:10]+"...")
+		}
+	}
+
+	if auth == "" {
+		// Log debug information
+		fmt.Println("[FOLDER] No auth token found in cookie or query param")
+
+		// Return JSON error instead of HTML error
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Auth token missing",
+		})
+		return
+	}
+
+	claims, err := authentication.ParseToken(auth)
+	if err != nil {
+		http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+		fmt.Println("[FOLDER] Auth token invalid:", err.Error())
+		// Return JSON error instead of HTML error
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Auth token invalid: " + err.Error(),
+		})
+		return
+	}
+	fmt.Println("[FOLDER] Auth successful for user ID:", claims.UID, "Username:", claims.Username)
+
+	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
+	if err != nil {
+		http.Error(w, "folderId missing or invalid", http.StatusBadRequest)
+		fmt.Println("[FOLDER] Invalid folder ID:", err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "folderId missing or invalid",
+		})
+		return
+	}
+	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		fmt.Println("[FOLDER] Error finding folder in database:", err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Folder not found: " + err.Error(),
+		})
+		return
+	}
+	err = RemoveFolder(folderId)
+	if err != nil {
+		http.Error(w, "Failed to remove folder", http.StatusInternalServerError)
+		fmt.Println("[FOLDER] Error removing folder:", err.Error())
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Failed to remove folder: " + err.Error(),
+		})
+		return
+	}
+	fmt.Println("[FOLDER] Successfully removed folder ID:", folderId)
+
+}
 func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[ITEM] RemoveItem request received:", r.Method, r.URL.String())
 	fmt.Println("[ITEM] Request headers:", r.Header)
