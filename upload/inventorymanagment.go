@@ -11,6 +11,7 @@ import (
 	"resonite-file-provider/database"
 	"resonite-file-provider/query"
 	"strconv"
+	"strings"
 )
 
 func AddInventory(userID int, inventoryName string) (int64, int64, error) {
@@ -148,7 +149,18 @@ func handleAddFolder(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	w.Write([]byte(strconv.FormatInt(newFolderId, 10)))
+	if strings.HasPrefix(r.UserAgent(), "Resonite") {
+		w.Write([]byte(strconv.FormatInt(newFolderId, 10)))
+	} else {
+		// Return success response
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":  true,
+			"folderId": newFolderId,
+			"name":     folderName,
+			"parentId": folderId,
+		})
+	}
 	fmt.Println("[FOLDER] AddFolder request received:", r.Method, r.URL.String())
 	fmt.Println("[FOLDER] Request headers:", r.Header)
 
@@ -246,11 +258,21 @@ func handleAddInventory(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	w.Write(
-		[]byte(
-			fmt.Sprintf("%d\n%d", invID, folderID),
-		),
-	)
+
+	if strings.HasPrefix(r.UserAgent(), "Resonite") {
+		w.Write(
+			[]byte(
+				fmt.Sprintf("%d\n%d", invID, folderID),
+			),
+		)
+	} else {
+		// Return success response
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"inventoryId":  invID,
+			"rootFolderId": folderID,
+		})
+	}
 }
 
 func RemoveItem(itemId int) error {
