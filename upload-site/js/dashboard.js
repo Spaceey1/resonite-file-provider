@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="item-icon"><i class="fas fa-file"></i></div>
                 <div class="item-name">${item.name}</div>
                 <div class="item-actions">
-                    <a href="${item.url}" class="btn btn-small" target="_blank">
+                    <a href="${item.url}.brson" class="btn btn-small" target="_blank">
                         <i class="fas fa-download"></i> Download
                     </a>
                     <button class="btn btn-small btn-danger delete-item" data-id="${item.id}">
