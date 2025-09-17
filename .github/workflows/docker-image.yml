@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - seed
     tags:
       - v*
   pull_request:
