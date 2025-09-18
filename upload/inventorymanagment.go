@@ -281,7 +281,7 @@ func RemoveFolder(folderId int) error {
 		folders.Scan(&id)
 		affectedFolders = append(affectedFolders, id)
 	}
-	for i := 0; i < len(affectedFolders); i++ {
+	for i := 0; i <= len(affectedFolders); i++ {
 		currentFolder := affectedFolders[i]
 		subfolders, err := database.Db.Query("SELECT id, name FROM Folders WHERE parent_folder_id = ?", currentFolder)
 		if err != nil {
