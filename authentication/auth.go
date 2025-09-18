@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"resonite-file-provider/database"
 	"strings"
-
+	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -117,6 +117,54 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Handle logout logic here
 	w.Write([]byte("Logout handler"))
+}
+
+func AuthCheck(w http.ResponseWriter, r *http.Request) (*Claims) {
+	// Log cookies
+	cookies := r.Cookies()
+	fmt.Println("[AUTH] Request cookies:", cookies)
+	var auth string
+	// First try cookie (preferred)
+	authCookie, err := r.Cookie("auth_token")
+	if err == nil {
+		auth = authCookie.Value
+		fmt.Println("[AUTH] Found auth_token cookie:", auth[:10]+"...")
+	} else {
+		// Fallback to query parameter
+		auth = r.URL.Query().Get("auth")
+		if auth != "" {
+			fmt.Println("[AUTH] Found auth in query param:", auth[:10]+"...")
+		}
+	}
+	if auth == "" {
+		// Log debug information
+		fmt.Println("[AUTH] No auth token found in cookie or query param")
+
+		// Return JSON error instead of HTML error
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Auth token missing",
+		})
+		return nil
+	}
+	claims, err := ParseToken(auth)
+	if err != nil {
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+		} else {
+			fmt.Println("[AUTH] Auth token invalid:", err.Error())
+			// Return JSON error instead of HTML error
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Auth token invalid: " + err.Error(),
+			})
+		}
+		return nil
+	}
+	fmt.Println("[AUTH] Auth successful for user ID:", claims.UID, "Username:", claims.Username)
+	return claims
 }
 
 // Call this before starting the server
