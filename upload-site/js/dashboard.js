@@ -369,7 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderElement.className = 'folder-item';
                 folderElement.dataset.id = folder.id;
                 folderElement.innerHTML = `
-                    <button class="btn btn-small btn-danger delete-item" data-id="${folder.id}"><i class="fas fa-trash"></i></button><div class="folder-icon"><i class="fas fa-folder"></div><div class="folder-name">${folder.name}</div>
+                    <div class="folder-icon"><i class="fas fa-folder"></i><button class="btn btn-small btn-danger delete-item" data-id="${folder.id}"><i class="fas fa-trash"></i></button></div>
+                    <div class="folder-name">${folder.name}</div>
                 `;
                 // Add event listeners for item actions
                 const deleteButton = folderElement.querySelector('.delete-item');
