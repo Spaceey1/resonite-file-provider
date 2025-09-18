@@ -522,7 +522,7 @@ input:focus {
     position: relative;
     overflow: hidden;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
@@ -535,7 +535,6 @@ input:focus {
 .item-icon {
     font-size: 36px;
     color: var(--primary-color);
-    margin-bottom: 12px;
     transition: var(--transition);
 }
 
@@ -546,16 +545,17 @@ input:focus {
 .item-name {
     font-weight: 500;
     word-break: break-word;
-    margin-bottom: 15px;
     flex-grow: 1;
+    text-align: left;
+    margin-left: 15px;
     width: 100%;
 }
 
 .item-actions {
     display: flex;
-    justify-content: center;
+    justify-content: right;
     gap: 10px;
-    width: 100%;
+    width: 40%;
 }
 
 .item-link, .delete-item {
