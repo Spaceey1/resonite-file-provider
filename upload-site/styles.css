@@ -499,6 +499,7 @@ input:focus {
     font-size: 36px;
     color: #ffb74d;
     margin-bottom: 10px;
+    margin-top: -30px;
     transition: var(--transition);
 }
 
