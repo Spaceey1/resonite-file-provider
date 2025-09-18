@@ -208,22 +208,6 @@ input:focus {
     justify-content: center;
     gap: 8px;
 }
-.side-btn {
-    background-color: var(--primary-color);
-    color: var(--white);
-    border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    transition: var(--transition);
-    width: 100%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
 
 .btn:hover {
     background-color: var(--primary-dark);
