@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="folder-name">${folder.name}</div>
                 `;
                 // Add event listeners for item actions
-                const deleteButton = folderElement.querySelector('.delete-item');
+                const deleteButton = folderElement.querySelector('.delete-item-side');
                 if (deleteButton) {
                     deleteButton.addEventListener('click', (e) => {
                         e.stopPropagation();
