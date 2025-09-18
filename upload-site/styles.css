@@ -598,7 +598,7 @@ input:focus {
     transition: var(--transition);
     cursor: pointer;
     border: none;
-    align-self: right;
+    align-self: self-end;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     color: var(--white);
     background-color: var(--error-color);
