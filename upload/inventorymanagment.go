@@ -281,9 +281,8 @@ func RemoveFolder(folderId int) error {
 		folders.Scan(&id)
 		affectedFolders = append(affectedFolders, id)
 	}
-	var folderQueue []int
-	for i := 0; i < len(folderQueue); i++ {
-		currentFolder := folderQueue[i]
+	for i := 0; i < len(affectedFolders); i++ {
+		currentFolder := affectedFolders[i]
 		subfolders, err := database.Db.Query("SELECT id, name FROM Folders WHERE parent_folder_id = ?", currentFolder)
 		if err != nil {
 			return err
@@ -291,9 +290,10 @@ func RemoveFolder(folderId int) error {
 		for subfolders.Next() {
 			var id int
 			subfolders.Scan(&id)
-			folderQueue = append(folderQueue, id)
+			affectedFolders = append(affectedFolders, id)
 		}
 	}
+	affectedFolders = append(affectedFolders, folderId)
 	for _, folder := range affectedFolders {
 		var affectedItems []int
 		items, err := database.Db.Query("SELECT id FROM Items where folder_id = ?", folder)
@@ -341,7 +341,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("[FOLDER] Failed Auth")
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"error":   "Failed Auth",
+				"error": "Failed Auth",
 			})
 		}
 		return
@@ -410,7 +410,7 @@ func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("[ITEM] Failed Auth")
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"error":   "Failed Auth",
+				"error": "Failed Auth",
 			})
 		}
 		return
