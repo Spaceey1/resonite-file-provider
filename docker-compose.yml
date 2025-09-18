@@ -23,12 +23,13 @@ services:
     container_name: resonite-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: resonite-inventory
-      MYSQL_USER: resonite-inventory
-      MYSQL_PASSWORD: resonitepassword
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: resonite-inventory
+      MARIADB_USER: resonite-inventory
+      MARIADB_PASSWORD: resonitepassword
     volumes:
       - ./mysql-data:/var/lib/mysql
+      - ./mysql-logs:/var/log/mysql
       - ./resonite-inventory-schema.sql:/docker-entrypoint-initdb.d/resonite-inventory-schema.sql
     ports:
       - "3306:3306"
