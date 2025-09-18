@@ -14,31 +14,6 @@ import (
 	"strings"
 )
 
-func AddInventory(userID int, inventoryName string) (int64, int64, error) {
-	res, err := database.Db.Exec(`INSERT INTO Inventories (name) VALUES (?)`, inventoryName)
-	if err != nil {
-		return -1, -1, err
-	}
-	invID, err := res.LastInsertId()
-	if err != nil {
-		return -1, -1, err
-	}
-	_, err = database.Db.Exec(`INSERT INTO users_inventories (user_id, inventory_id) VALUES (?, ?)`, userID, invID)
-	if err != nil {
-		return -1, -1, err
-	}
-	res, err = database.Db.Exec(`INSERT INTO Folders (name, parent_folder_id, inventory_id) VALUES (?, ?, ?)`, "root", -1, invID)
-
-	if err != nil {
-		return -1, -1, err
-	}
-	folderID, err := res.LastInsertId()
-	if err != nil {
-		return -1, -1, err
-	}
-	return invID, folderID, nil
-}
-
 func AddFolder(parentFolderID int, folderName string) (int64, error) {
 	if folderName == "" {
 		return -1, fmt.Errorf("Folder name was not specified")
@@ -59,7 +34,6 @@ func AddFolder(parentFolderID int, folderName string) (int64, error) {
 	}
 	return newFolderId, nil
 }
-
 func handleAddFolder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -160,6 +134,30 @@ func handleAddFolder(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func AddInventory(userID int, inventoryName string) (int64, int64, error) {
+	res, err := database.Db.Exec(`INSERT INTO Inventories (name) VALUES (?)`, inventoryName)
+	if err != nil {
+		return -1, -1, err
+	}
+	invID, err := res.LastInsertId()
+	if err != nil {
+		return -1, -1, err
+	}
+	_, err = database.Db.Exec(`INSERT INTO users_inventories (user_id, inventory_id) VALUES (?, ?)`, userID, invID)
+	if err != nil {
+		return -1, -1, err
+	}
+	res, err = database.Db.Exec(`INSERT INTO Folders (name, parent_folder_id, inventory_id) VALUES (?, ?, ?)`, "root", -1, invID)
+
+	if err != nil {
+		return -1, -1, err
+	}
+	folderID, err := res.LastInsertId()
+	if err != nil {
+		return -1, -1, err
+	}
+	return invID, folderID, nil
+}
 func handleAddInventory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INVENTORY] AddInventory request received:", r.Method, r.URL.String())
 	fmt.Println("[INVENTORY] Request headers:", r.Header)
@@ -269,6 +267,80 @@ func RemoveItem(itemId int) error {
 	}
 	return nil
 }
+func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("[ITEM] RemoveItem request received:", r.Method, r.URL.String())
+	fmt.Println("[ITEM] Request headers:", r.Header)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		fmt.Println("[ITEM] Invalid method:", r.Method)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Invalid request method",
+		})
+		println(r.Method)
+		return
+	}
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "Failed Auth", http.StatusUnauthorized)
+		} else {
+			fmt.Println("[ITEM] Failed Auth")
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error": "Failed Auth",
+			})
+		}
+		return
+	}
+
+	itemId, err := strconv.Atoi(r.URL.Query().Get("itemId"))
+	if err != nil {
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "itemId missing or invalid", http.StatusBadRequest)
+		} else {
+			fmt.Println("[ITEM] Invalid item ID:", err.Error())
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "itemId missing or invalid",
+			})
+		}
+		return
+	}
+	var folderId int
+	database.Db.QueryRow("SELECT folder_id FROM Items WHERE id = ?", itemId).Scan(&folderId)
+	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+		} else {
+			fmt.Println("[ITEM] Error finding item in database:", err.Error())
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Item not found: " + err.Error(),
+			})
+		}
+		return
+	}
+	err = RemoveItem(itemId)
+	if err != nil {
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "Failed to remove item", http.StatusInternalServerError)
+		} else {
+			fmt.Println("[ITEM] Error removing item:", err.Error())
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Failed to remove item: " + err.Error(),
+			})
+		}
+		return
+	}
+	fmt.Println("[ITEM] Successfully removed item ID:", itemId)
+}
+
 func RemoveFolder(folderId int) error {
 	folders, err := database.Db.Query("SELECT id FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
@@ -388,16 +460,54 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[FOLDER] Successfully removed folder ID:", folderId)
 
 }
-func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("[ITEM] RemoveItem request received:", r.Method, r.URL.String())
-	fmt.Println("[ITEM] Request headers:", r.Header)
+
+func RemoveInventory(inventoryId int) error {
+	folders, err := database.Db.Query("SELECT if FROM Folders WHERE inventory_id = ?", inventoryId)
+	if err != nil {
+		return err
+	}
+	var affectedFolders []int
+	for folders.Next() {
+		var id int
+		folders.Scan(&id)
+		affectedFolders = append(affectedFolders, id)
+	}
+	for _, folder := range affectedFolders {
+		var affectedItems []int
+		items, err := database.Db.Query("SELECT id FROM Items where folder_id = ?", folder)
+		if err != nil {
+			return err
+		}
+		for items.Next() {
+			var itemId int
+			items.Scan(&itemId)
+			affectedItems = append(affectedItems, itemId)
+		}
+		for _, item := range affectedItems {
+			err := RemoveItem(item)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for _, folder := range affectedFolders {
+		_, err = database.Db.Exec("DELETE FROM Folders WHERE id = ?", folder)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = database.Db.Exec("DELETE FROM Inventories WHERE id = ?", inventoryId)
+	return nil
+}
+func handleRemoveInventory(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("[INVENTORY] RemoveInventory request received:", r.Method, r.URL.String())
+	fmt.Println("[INVENTORY] Request headers:", r.Header)
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		fmt.Println("[ITEM] Invalid method:", r.Method)
+		fmt.Println("[INVENTORY] Invalid method:", r.Method)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": false,
-			"error":   "Invalid request method",
+			"error": "Invalid request method",
 		})
 		println(r.Method)
 		return
@@ -407,7 +517,7 @@ func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.UserAgent(), "Resonite") {
 			http.Error(w, "Failed Auth", http.StatusUnauthorized)
 		} else {
-			fmt.Println("[ITEM] Failed Auth")
+			fmt.Println("[INVENTORY] Failed Auth")
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"error": "Failed Auth",
@@ -416,48 +526,44 @@ func handleRemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	itemId, err := strconv.Atoi(r.URL.Query().Get("itemId"))
+	inventoryId, err := strconv.Atoi(r.URL.Query().Get("inventoryId"))
 	if err != nil {
 		if strings.HasPrefix(r.UserAgent(), "Resonite") {
-			http.Error(w, "itemId missing or invalid", http.StatusBadRequest)
+			http.Error(w, "inventoryId missing or invalid", http.StatusBadRequest)
 		} else {
-			fmt.Println("[ITEM] Invalid item ID:", err.Error())
+			fmt.Println("[INVENTORY] Invalid folder ID:", err.Error())
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success": false,
-				"error":   "itemId missing or invalid",
+				"error": "invetoryId missing or invalid",
 			})
 		}
 		return
 	}
-	var folderId int
-	database.Db.QueryRow("SELECT folder_id FROM Items WHERE id = ?", itemId).Scan(&folderId)
-	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
+	if allowed, err := query.IsFolderOwner(inventoryId, claims.UID); err != nil || !allowed {
 		if strings.HasPrefix(r.UserAgent(), "Resonite") {
 			http.Error(w, "Forbidden", http.StatusForbidden)
 		} else {
-			fmt.Println("[ITEM] Error finding item in database:", err.Error())
+			fmt.Println("[INVENTORY] Error finding inventory in database:", err.Error())
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success": false,
-				"error":   "Item not found: " + err.Error(),
+				"error": "Inventory not found: " + err.Error(),
 			})
 		}
 		return
 	}
-	err = RemoveItem(itemId)
+	err = RemoveInventory(inventoryId)
 	if err != nil {
 		if strings.HasPrefix(r.UserAgent(), "Resonite") {
-			http.Error(w, "Failed to remove item", http.StatusInternalServerError)
+			http.Error(w, "Failed to remove folder", http.StatusInternalServerError)
 		} else {
-			fmt.Println("[ITEM] Error removing item:", err.Error())
+			fmt.Println("[INVENTORY] Error removing folder:", err.Error())
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"success": false,
-				"error":   "Failed to remove item: " + err.Error(),
+				"error": "Failed to remove Inventory: " + err.Error(),
 			})
 		}
 		return
 	}
-	fmt.Println("[ITEM] Successfully removed item ID:", itemId)
+	fmt.Println("[INVENTORY] Successfully removed folder ID:", inventoryId)
+
 }
