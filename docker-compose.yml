@@ -19,7 +19,7 @@ services:
       - resonite-network
 
   db:
-    image: mysql:8.0
+    image: mariadb:lts
     container_name: resonite-db
     restart: always
     environment:
