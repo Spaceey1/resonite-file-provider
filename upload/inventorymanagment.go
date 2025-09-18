@@ -462,7 +462,7 @@ func handleRemoveFolder(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveInventory(inventoryId int) error {
-	folders, err := database.Db.Query("SELECT if FROM Folders WHERE inventory_id = ?", inventoryId)
+	folders, err := database.Db.Query("SELECT id FROM Folders WHERE inventory_id = ?", inventoryId)
 	if err != nil {
 		return err
 	}
