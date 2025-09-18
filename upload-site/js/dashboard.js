@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
                 //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
-                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <div><button class="btn-small side-btn-danger delete-item-side" data-id="${inventory.id}"><i class="fas fa-trash"></i></button></div>`;     
+                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <button class="btn-small side-btn-danger delete-item-side" data-id="${inventory.id}"><i class="fas fa-trash"></i></button>`;     
                 inventoryElement.addEventListener('click', () => {
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
