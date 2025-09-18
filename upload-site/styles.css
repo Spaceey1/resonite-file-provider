@@ -593,16 +593,22 @@ input:focus {
     color: var(--text-color);
     width: 36px;
     height: 36px;
-    border-radius: 80%;
-    display: right;
+    border-radius: 10%;
+    display: flex;
     align-items: center;
     justify-content: center;
     transition: var(--transition);
     cursor: pointer;
     border: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    color: var(--error-color);
+    background-color: var(--white);
 }
-
+.delete-item-side:hover {
+    background-color: var(--white);
+    color: var(--error-color);
+    transform: translateY(-2px);
+}
 .item-link {
     color: var(--primary-color);
     text-decoration: none;
