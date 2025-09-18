@@ -275,7 +275,6 @@ func RemoveFolder(folderId int) error {
 		return err
 	}
 	var affectedFolders []int
-	affectedFolders = append(affectedFolders, folderId)
 	for folders.Next() {
 		var id int
 		folders.Scan(&id)
