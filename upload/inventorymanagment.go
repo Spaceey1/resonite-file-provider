@@ -270,31 +270,28 @@ func RemoveItem(itemId int) error {
 	return nil
 }
 func RemoveFolder(folderId int) error {
-	var affectedFolders []int
 	folders, err := database.Db.Query("SELECT id FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
 		return err
 	}
+	var affectedFolders []int
 	affectedFolders = append(affectedFolders, folderId)
 	for folders.Next() {
 		var id int
 		folders.Scan(&id)
 		affectedFolders = append(affectedFolders, id)
 	}
-	for i := 0; i < len(affectedFolders); i++ {
-		folders := affectedFolders[i]
-		subfolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folders)
+	var folderQueue []int
+	for i := 0; i < len(folderQueue); i++ {
+		currentFolder := folderQueue[i]
+		subfolders, err := database.Db.Query("SELECT id, name FROM Folders WHERE parent_folder_id = ?", currentFolder)
 		if err != nil {
 			return err
 		}
-		var subfolderIds []int
 		for subfolders.Next() {
 			var id int
 			subfolders.Scan(&id)
-			subfolderIds = append(subfolderIds, id)
-		}
-		for _, subfolder := range subfolderIds {
-			affectedFolders = append(affectedFolders, subfolder)
+			folderQueue = append(folderQueue, id)
 		}
 	}
 	for _, folder := range affectedFolders {
