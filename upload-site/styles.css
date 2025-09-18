@@ -208,6 +208,22 @@ input:focus {
     justify-content: center;
     gap: 8px;
 }
+.side-btn {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: var(--transition);
+    width: 100%;
+    display: inline-flex;
+    align-items: right;
+    justify-content: center;
+    gap: 8px;
+}
 
 .btn:hover {
     background-color: var(--primary-dark);
@@ -231,6 +247,13 @@ input:focus {
 
 .btn-danger:hover {
     background-color: #c62828;
+}
+.side-btn-danger {
+    background-color: #c62828;
+}
+
+.side-btn-danger:hover {
+    background-color: var(--error-color);
 }
 
 .message {
@@ -559,6 +582,20 @@ input:focus {
     border-radius: 50%;
     display: flex;
     align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.delete-item-side {
+    background-color: var(--white);
+    color: var(--text-color);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: right;
     justify-content: center;
     transition: var(--transition);
     cursor: pointer;

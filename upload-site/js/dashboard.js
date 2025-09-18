@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
                 //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
-                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <button class="btn btn-small btn-danger delete-item" data-id="${inventory.id}"><i class="fas fa-trash"></i></button>`;     
+                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <button class="side-btn btn-small side-btn-danger delete-item-side" data-id="${inventory.id}"><i class="fas fa-trash"></i></button>`;     
                 inventoryElement.addEventListener('click', () => {
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     inventoryElement.classList.add('active');
                 });
                 // Add event listeners for item actions
-                const deleteButton = inventoryElement.querySelector('.delete-item');
+                const deleteButton = inventoryElement.querySelector('.delete-item-side');
                 if (deleteButton) {
                     deleteButton.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -369,7 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderElement.className = 'folder-item';
                 folderElement.dataset.id = folder.id;
                 folderElement.innerHTML = `
-                    <div class="folder-icon"><i class="fas fa-folder"></i><button class="btn btn-small btn-danger delete-item" data-id="${folder.id}"><i class="fas fa-trash"></i></button></div>
+                    <button class="side-btn btn-small side-btn-danger delete-item-side" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
+                    <div class="folder-icon"><i class="fas fa-folder"></i></div>
                     <div class="folder-name">${folder.name}</div>
                 `;
                 // Add event listeners for item actions
