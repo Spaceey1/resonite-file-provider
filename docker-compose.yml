@@ -10,7 +10,7 @@ services:
     ports:
       - "5819:5819"  # Server. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
     volumes:
-      - ./assets:/app/assets
+      - ./live-data/assets:/app/assets
       - ./upload-site:/app/upload-site
 #      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
     depends_on:
@@ -28,8 +28,8 @@ services:
       MARIADB_USER: resonite-inventory
       MARIADB_PASSWORD: resonitepassword
     volumes:
-      - ./mysql-data:/var/lib/mysql
-      - ./mysql-logs:/var/log/mysql
+      - ./live-data/mysql-data:/var/lib/mysql
+      - ./live-data/mysql-logs:/var/log/mysql
       - ./resonite-inventory-schema.sql:/docker-entrypoint-initdb.d/resonite-inventory-schema.sql
     ports:
       - "3306:3306"
