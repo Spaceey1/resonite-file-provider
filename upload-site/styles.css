@@ -220,7 +220,7 @@ input:focus {
     transition: var(--transition);
     width: 100%;
     display: inline-flex;
-    align-items: right;
+    align-items: center;
     justify-content: center;
     gap: 8px;
 }
@@ -589,13 +589,13 @@ input:focus {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 .delete-item-side {
-    background-color: var(--white);
+    background-color: var(--error-color);
     color: var(--text-color);
     width: 36px;
     height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: right;
+    border-radius: 80%;
+    display: right;
+    align-items: center;
     justify-content: center;
     transition: var(--transition);
     cursor: pointer;
