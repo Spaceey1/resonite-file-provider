@@ -96,37 +96,9 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-	// Log cookies
-	cookies := r.Cookies()
-	fmt.Println("[FOLDER] Request cookies:", cookies)
-	var auth string
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		auth = authCookie.Value
-		fmt.Println("[FOLDER] Found auth_token cookie:", auth[:10]+"...")
-	} else {
-		// Fallback to query parameter
-		auth = r.URL.Query().Get("auth")
-		if auth != "" {
-			fmt.Println("[FOLDER] Found auth in query param:", auth[:10]+"...")
-		}
-	}
-	if auth == "" {
-		// Log debug information
-		fmt.Println("[FOLDER] No auth token found in cookie or query param")
-
-		// Return JSON error instead of HTML error
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": false,
-			"error":   "Auth token missing",
-		})
-		return
-	}
-	claims, err := authentication.ParseToken(auth)
-	if err != nil {
-		http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[HandleUpload] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {

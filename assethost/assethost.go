@@ -31,19 +31,9 @@ func handleRequest(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		var authToken string
-
-		// First try cookie (preferred)
-		authCookie, err := r.Cookie("auth_token")
-		if err == nil {
-			authToken = authCookie.Value
-		} else {
-			// Fallback to query parameter
-			authToken = r.URL.Query().Get("auth")
-		}
-		claims, err := authentication.ParseToken(authToken)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		claims := authentication.AuthCheck(w, r)
+		if claims == nil {
+			http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 			return
 		}
 		uId := claims.UID

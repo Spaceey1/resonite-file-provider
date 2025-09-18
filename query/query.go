@@ -122,25 +122,9 @@ func listFolders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 		return
 	}
-	// Try to get auth token from multiple sources
-	var authKey string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -203,25 +187,9 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	// Try to get auth token from multiple sources
-	var authKey string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[ChildItems] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -263,25 +231,10 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 
 // handles /query/inventories
 func listInventories(w http.ResponseWriter, r *http.Request) {
-	// Try to get auth token from multiple sources
-	var auth string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		auth = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		auth = r.URL.Query().Get("auth")
-	}
-
-	if auth == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[Inventories] Failed Auth", http.StatusUnauthorized)
 		return
-	}
-	claims, err := authentication.ParseToken(auth)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
 	}
 	result, err := database.Db.Query("SELECT name, id FROM `Inventories` WHERE id in (SELECT id FROM users_inventories WHERE user_id = ?)", claims.UID)
 	if err != nil {
@@ -331,25 +284,9 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	// Try to get auth token from multiple sources
-	var authKey string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -432,25 +369,9 @@ func getInventoryRootFolder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "inventoryId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	// Try to get auth token from multiple sources
-	var authKey string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[RootFolder] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsInventoryOwner(inventoryId, claims.UID); !allowed || err != nil {
@@ -476,25 +397,9 @@ func searchInventory(w http.ResponseWriter, r *http.Request) {
 	if query == "" {
 		http.Error(w, "query is either not specified or is invalid", http.StatusBadRequest)
 	}
-	// Try to get auth token from multiple sources
-	var authKey string
-
-	// First try cookie (preferred)
-	authCookie, err := r.Cookie("auth_token")
-	if err == nil {
-		authKey = authCookie.Value
-	} else {
-		// Fallback to query parameter
-		authKey = r.URL.Query().Get("auth")
-	}
-
-	if authKey == "" {
-		http.Error(w, "Auth token missing", http.StatusUnauthorized)
-		return
-	}
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[SearchInventory] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsInventoryOwner(inventoryId, claims.UID); !allowed || err != nil {

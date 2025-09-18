@@ -69,28 +69,11 @@ func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
         return
     }
     
-    // Try to get auth token from multiple sources
-    var authKey string
-    
-    // First try cookie (preferred)
-    authCookie, err := r.Cookie("auth_token")
-    if err == nil {
-        authKey = authCookie.Value
-    } else {
-        // Fallback to query parameter
-        authKey = r.URL.Query().Get("auth")
-    }
-    
-    if authKey == "" {
-        http.Error(w, "Auth token missing", http.StatusUnauthorized)
-        return
-    }
-    
-    claims, err := authentication.ParseToken(authKey)
-    if err != nil {
-        http.Error(w, "Auth token invalid: "+err.Error(), http.StatusUnauthorized)
-        return
-    }
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
+		return
+	}
     
     // Check if user has access to this inventory
     var hasAccess bool
