@@ -589,8 +589,6 @@ input:focus {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 .delete-item-side {
-    background-color: var(--error-color);
-    color: var(--text-color);
     width: 36px;
     height: 36px;
     border-radius: 10%;
