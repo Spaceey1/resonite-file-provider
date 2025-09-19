@@ -2,6 +2,7 @@ package query
 
 import (
 	"encoding/json"
+	"database/sql"
 	"net/http"
 	"path/filepath"
 	"resonite-file-provider/animxmaker"
@@ -12,7 +13,7 @@ import (
 )
 
 func GetChildFolders(folderId int) ([]int, []string, int, error) {
-	childFolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId);
+	childFolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
 		return nil, nil, -1, err
 	}
@@ -38,7 +39,7 @@ func GetChildFolders(folderId int) ([]int, []string, int, error) {
 }
 
 func GetChildItems(folderId int) ([]int, []string, []string, error) {
-	items, err := database.Db.Query("SELECT id, name, url FROM Items where folder_id = ?", folderId);
+	items, err := database.Db.Query("SELECT id, name, url FROM Items where folder_id = ?", folderId)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -63,7 +64,7 @@ func GetChildItems(folderId int) ([]int, []string, []string, error) {
 	return itemsIds, itemsNames, itemsUrls, nil
 }
 
-func GetSearchResults(query string, inventoryId int) ([]int, []string, []string, error){
+func GetSearchResults(query string, inventoryId int) ([]int, []string, []string, error) {
 	items, err := database.Db.Query(
 		`select Items.id, Items.name, Items.url
 		from Items
@@ -97,9 +98,9 @@ func IsFolderOwner(folderId int, userId int) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for rows.Next(){
+	for rows.Next() {
 		var currectUserId int
-		if err := rows.Scan(&currectUserId); err != nil{
+		if err := rows.Scan(&currectUserId); err != nil {
 			return false, err
 		}
 		if currectUserId == userId {
@@ -109,21 +110,21 @@ func IsFolderOwner(folderId int, userId int) (bool, error) {
 	return false, nil
 }
 
-func IsInventoryOwner(inventoryId int, userId int) (bool, error){
+func IsInventoryOwner(inventoryId int, userId int) (bool, error) {
 	// TODO
 	return true, nil
 }
 
+// handles GET /query/childfolders
 func listFolders(w http.ResponseWriter, r *http.Request) {
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 		return
 	}
-	authKey := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -145,32 +146,50 @@ func listFolders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Write(encodedAnimaiton)
-	}else{
+	} else {
 		var items []map[string]any
-		for i := 0; i < len(names) && i < len(ids); i++{
+		for i := 0; i < len(names) && i < len(ids); i++ {
 			items = append(items, map[string]any{
 				"name": names[i],
-				"id": ids[i],
+				"id":   ids[i],
 			})
 		}
+					// Get parent folder info
+		var parentInfo *ParentFolderInfo
+		var parentID sql.NullInt64
+		var parentName sql.NullString
+	
+		err = database.Db.QueryRow(`
+			SELECT parent_folder_id, 
+		       (SELECT name FROM Folders WHERE id = f.parent_folder_id) as parent_name
+			FROM Folders f 
+			WHERE id = ?
+		`, folderId).Scan(&parentID, &parentName)
+	
+		if err == nil && parentID.Valid && parentName.Valid {
+			parentInfo = &ParentFolderInfo{
+				ID:   int(parentID.Int64),
+				Name: parentName.String,
+			}
+		}
 		data := map[string]any{
-			"results": items,
-			"parentId": parentID,
+			"results":  items,
+			"parentId": parentInfo,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
 	}
 }
 
+// handles /query/childItems
 func listItems(w http.ResponseWriter, r *http.Request) {
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	authKey := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[ChildItems] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -193,13 +212,13 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(encodedAnimaiton)
 		return
-	}else{
+	} else {
 		var items []map[string]any
-		for i := 0; i < len(names) && i < len(ids); i++{
+		for i := 0; i < len(names) && i < len(ids); i++ {
 			items = append(items, map[string]any{
 				"name": names[i],
-				"id": ids[i],
-				"url": urls[i],
+				"id":   ids[i],
+				"url":  urls[i],
 			})
 		}
 		data := map[string]any{
@@ -210,11 +229,12 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func listInventories(w http.ResponseWriter, r *http.Request){
-	auth := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(auth)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+// handles /query/inventories
+func listInventories(w http.ResponseWriter, r *http.Request) {
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[Inventories] Failed Auth", http.StatusUnauthorized)
+		return
 	}
 	result, err := database.Db.Query("SELECT name, id FROM `Inventories` WHERE id in (SELECT id FROM users_inventories WHERE user_id = ?)", claims.UID)
 	if err != nil {
@@ -242,12 +262,12 @@ func listInventories(w http.ResponseWriter, r *http.Request){
 		}
 		w.Write(encodedResponse)
 		w.WriteHeader(http.StatusOK)
-	}else{
+	} else {
 		var items []map[string]any
-		for i := 0; i < len(inventoryNames) && i < len(inventoryIds); i++{
+		for i := 0; i < len(inventoryNames) && i < len(inventoryIds); i++ {
 			items = append(items, map[string]any{
 				"name": inventoryNames[i],
-				"id": inventoryIds[i],
+				"id":   inventoryIds[i],
 			})
 		}
 		data := map[string]any{
@@ -258,15 +278,15 @@ func listInventories(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+// handles /query/folderContent
 func listFolderContents(w http.ResponseWriter, r *http.Request) {
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	authKey := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
@@ -283,7 +303,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error while getting folders", http.StatusInternalServerError)
 		return
 	}
-	if strings.HasPrefix(r.UserAgent(), "Resonite"){
+	if strings.HasPrefix(r.UserAgent(), "Resonite") {
 		response := animxmaker.Animation{
 			Tracks: []animxmaker.AnimationTrackWrapper{
 				animxmaker.ListTrack(itemIdsTrack, "items", "id"),
@@ -299,43 +319,59 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error while encoding animx", http.StatusInternalServerError)
 		}
 		w.Write(encodedResponse)
-	}else{
+	} else {
 		var items []map[string]any
 		var folders []map[string]any
-		for i := 0; i < len(itemIdsTrack); i++{
+		for i := 0; i < len(itemIdsTrack); i++ {
 			items = append(items, map[string]any{
-				"id": itemIdsTrack[i],
+				"id":   itemIdsTrack[i],
 				"name": itemNamesTrack[i],
-				"url": itemUrlsTrack[i],
+				"url":  itemUrlsTrack[i],
 			})
 		}
-		for i := 0; i < len(folderIdsTrack); i++{
+		for i := 0; i < len(folderIdsTrack); i++ {
 			folders = append(folders, map[string]any{
-				"id": folderIdsTrack[i],
+				"id":   folderIdsTrack[i],
 				"name": folderNamesTrack[i],
 			})
 		}
+			// Get parent folder info
+		var parentInfo *ParentFolderInfo
+		var parentID sql.NullInt64
+		var parentName sql.NullString
+	
+		err = database.Db.QueryRow(`
+			SELECT parent_folder_id, 
+		       (SELECT name FROM Folders WHERE id = f.parent_folder_id) as parent_name
+			FROM Folders f 
+			WHERE id = ?
+		`, folderId).Scan(&parentID, &parentName)
+	
+		if err == nil && parentID.Valid && parentName.Valid {
+			parentInfo = &ParentFolderInfo{
+				ID:   int(parentID.Int64),
+				Name: parentName.String,
+			}
+		}
 		data := map[string]any{
-			"items": items,
+			"items":   items,
 			"folders": folders,
-			"parent": parentFolder,
+			"parent":  parentInfo,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
 	}
 }
 
-
-
-func getInventoryRootFolder(w http.ResponseWriter, r *http.Request){
+// handles /query/inventoryRootFolder
+func getInventoryRootFolder(w http.ResponseWriter, r *http.Request) {
 	inventoryId, err := strconv.Atoi(r.URL.Query().Get("inventoryId"))
 	if err != nil {
 		http.Error(w, "inventoryId is either not specified or is invalid", http.StatusBadRequest)
 	}
-	authKey := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[RootFolder] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsInventoryOwner(inventoryId, claims.UID); !allowed || err != nil {
@@ -351,7 +387,8 @@ func getInventoryRootFolder(w http.ResponseWriter, r *http.Request){
 	w.Write([]byte(strconv.Itoa(rootFolderId)))
 }
 
-func searchInventory(w http.ResponseWriter, r *http.Request){
+// handles /query/search
+func searchInventory(w http.ResponseWriter, r *http.Request) {
 	inventoryId, err := strconv.Atoi(r.URL.Query().Get("inventoryId"))
 	if err != nil {
 		http.Error(w, "inventoryId is either not specified or is invalid", http.StatusBadRequest)
@@ -360,10 +397,9 @@ func searchInventory(w http.ResponseWriter, r *http.Request){
 	if query == "" {
 		http.Error(w, "query is either not specified or is invalid", http.StatusBadRequest)
 	}
-	authKey := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(authKey)
-	if err != nil {
-		http.Error(w, "Auth token invalid or missing", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[SearchInventory] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := IsInventoryOwner(inventoryId, claims.UID); !allowed || err != nil {
@@ -385,13 +421,13 @@ func searchInventory(w http.ResponseWriter, r *http.Request){
 		}
 		w.Write(encodedResponse)
 		w.WriteHeader(http.StatusOK)
-	}else{
+	} else {
 		var items []map[string]any
-		for i := 0; i < len(itemIds); i++{
+		for i := 0; i < len(itemIds); i++ {
 			items = append(items, map[string]any{
 				"name": itemNames[i],
-				"id": itemIds[i],
-				"url": itemUrls[i],
+				"id":   itemIds[i],
+				"url":  itemUrls[i],
 			})
 		}
 		data := map[string]any{

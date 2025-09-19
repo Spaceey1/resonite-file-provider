@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonite Asset Manager - Folder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="active-section">
+            <header class="main-header">
+                <div class="container">
+                    <div class="logo">Resonite<span>Assets</span></div>
+                    <div class="user-info">
+                        <span id="username-display">{{.Username}}</span>
+                        <a href="/logout" class="btn btn-small"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="container main-content">
+                <aside class="sidebar">
+                    <div class="sidebar-header">
+                        <h3>Inventories</h3>
+                        <button id="new-inventory-btn" class="btn btn-small"><i class="fas fa-plus-circle"></i></button>
+                    </div>
+                    <div id="inventory-tree" class="inventory-tree">
+                        <!-- Inventories will be loaded dynamically -->
+                    </div>
+                    
+                    <div class="sidebar-header mt-4">
+                        <h3>Folders</h3>
+                        <button id="new-folder-btn" class="btn btn-small"><i class="fas fa-folder-plus"></i></button>
+                    </div>
+                    <div id="folder-tree" class="folder-tree">
+                        {{range .Folders}}
+                            <div class="folder" data-id="{{.ID}}">
+                                <i class="fas fa-folder"></i> {{.Name}}
+                            </div>
+                        {{else}}
+                            <p class="empty-folder">No folders</p>
+                        {{end}}
+                    </div>
+                </aside>
+                
+                <main class="content">
+                    <div class="toolbar">
+                        <div class="breadcrumbs" id="breadcrumbs">
+                            {{range $index, $crumb := .Path}}
+                                {{if $index}}
+                                    <span class="breadcrumb-separator">/</span>
+                                {{end}}
+                                <a href="/folder?id={{.ID}}&auth={{$.AuthToken}}" class="breadcrumb-item">{{.Name}}</a>
+                            {{end}}
+                        </div>
+                        <div class="actions">
+                            <button id="upload-btn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload</button>
+                        </div>
+                    </div>
+                    
+                    <div id="items-container" class="items-container">
+                        {{range .Items}}
+                            <div class="item">
+                                <div class="item-icon"><i class="fas fa-cube"></i></div>
+                                <div class="item-name">{{.Name}}</div>
+                                <div class="item-actions">
+                                    <a href="{{.URL}}?auth={{$.AuthToken}}" class="item-link" target="_blank">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="delete-item" data-id="{{.ID}}" data-name="{{.Name}}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {{else}}
+                            <div class="no-items-message">
+                                <i class="fas fa-folder-open fa-3x"></i>
+                                <p>This folder is empty</p>
+                                <p class="help-text">Click the Upload button to add assets</p>
+                            </div>
+                        {{end}}
+                    </div>
+                </main>
+            </div>
+        </section>
+
+        <!-- Modals -->
+        <div id="upload-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-upload"></i> Upload Asset</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="auth" value="{{.AuthToken}}">
+                        <input type="hidden" name="folderId" value="{{.FolderId}}">
+                        <div class="input-group">
+                            <label for="file-upload">Select Resonite Package (.resonitepackage)</label>
+                            <div class="file-upload-container">
+                                <input type="file" id="file-upload" name="file" accept=".resonitepackage" required>
+                                <label for="file-upload" class="file-upload-label">
+                                    <i class="fas fa-file-upload"></i>
+                                    <span id="file-name">Choose a file...</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="upload-preview" class="upload-preview hidden">
+                            <div class="preview-icon"><i class="fas fa-file-archive"></i></div>
+                            <div class="preview-details">
+                                <div id="preview-filename">filename.resonitepackage</div>
+                                <div id="preview-filesize">0 KB</div>
+                            </div>
+                        </div>
+                        <div id="progress-container" class="progress-container hidden">
+                            <div id="progress-bar" class="progress-bar"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="new-folder-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-folder-plus"></i> Create New Folder</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="new-folder-form" action="/addFolder" method="GET">
+                        <input type="hidden" name="auth" value="{{.AuthToken}}">
+                        <input type="hidden" name="folderId" value="{{.FolderId}}">
+                        <div class="input-group">
+                            <label for="folder-name">Folder Name</label>
+                            <div class="input-icon">
+                                <i class="fas fa-folder"></i>
+                                <input type="text" id="folder-name" name="folderName" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div id="new-inventory-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-boxes"></i> Create New Inventory</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="new-inventory-form" action="/addInventory" method="POST">
+                        <input type="hidden" name="auth" value="{{.AuthToken}}">
+                        <div class="input-group">
+                            <label for="inventory-name">Inventory Name</label>
+                            <div class="input-icon">
+                                <i class="fas fa-box"></i>
+                                <input type="text" id="inventory-name" name="inventoryName" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div id="delete-confirm-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-trash"></i> Confirm Deletion</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <span id="delete-item-name">this item</span>?</p>
+                    <p class="warning"><i class="fas fa-exclamation-triangle"></i> This action cannot be undone.</p>
+                    <div class="modal-actions">
+                        <button id="cancel-delete" class="btn">Cancel</button>
+                        <button id="confirm-delete" class="btn btn-danger">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/folder.js"></script>
+</body>
+</html>

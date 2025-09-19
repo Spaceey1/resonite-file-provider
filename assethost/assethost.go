@@ -7,6 +7,7 @@ import (
 	"resonite-file-provider/database"
 	"strings"
 )
+
 func isOwnedBy(owner int, url string) bool {
 	var exists bool
 	url = strings.TrimSuffix(url, ".brson")
@@ -30,10 +31,9 @@ func handleRequest(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		authToken := r.URL.Query().Get("auth")
-		claims, err := authentication.ParseToken(authToken)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		claims := authentication.AuthCheck(w, r)
+		if claims == nil {
+			http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 			return
 		}
 		uId := claims.UID
@@ -45,6 +45,6 @@ func handleRequest(next http.Handler) http.Handler {
 	})
 }
 
-func AddAssetListeners(){
+func AddAssetListeners() {
 	http.Handle("/assets/", handleRequest(http.FileServer(http.Dir(config.GetConfig().Server.AssetsPath))))
 }

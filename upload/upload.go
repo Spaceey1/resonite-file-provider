@@ -13,6 +13,8 @@ import (
 	"resonite-file-provider/config"
 	"resonite-file-provider/database"
 	"resonite-file-provider/query"
+	"resonite-file-provider/environment"
+
 	"strconv"
 	"strings"
 
@@ -84,7 +86,7 @@ func readBrson(data []byte) (map[string]any, error) {
 	return doc, nil
 }
 
-func HandleUpload(w http.ResponseWriter, r *http.Request) {
+func handleUpload(w http.ResponseWriter, r *http.Request) {
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
 		http.Error(w, "folderId missing or invalid", http.StatusBadRequest)
@@ -94,10 +96,9 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-	auth := r.URL.Query().Get("auth")
-	claims, err := authentication.ParseToken(auth)
-	if err != nil {
-		http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		http.Error(w, "[HandleUpload] Failed Auth", http.StatusUnauthorized)
 		return
 	}
 	if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
@@ -213,7 +214,7 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var prefix string = "https://"
-	if r.TLS == nil {
+	if r.TLS == nil && !environment.GetEnvAsBool("BEHIND_PROXY", false) {
 		prefix = "http://"
 	}
 	assetUrl :=  prefix + filepath.Join(config.GetConfig().Server.Host + ":" + strconv.Itoa(config.GetConfig().Server.Port), "assets")
@@ -225,8 +226,10 @@ func HandleUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddListeners() {
-	http.HandleFunc("/upload", HandleUpload)
-	http.HandleFunc("/addFolder", HandleAddFolder)
-	http.HandleFunc("/removeItem", HandleRemoveItem)
-	http.HandleFunc("/addInventory", HandleAddInventory)
+	http.HandleFunc("/upload", handleUpload)
+	http.HandleFunc("/addFolder", handleAddFolder)
+	http.HandleFunc("/removeItem", handleRemoveItem)
+	http.HandleFunc("/removeFolder", handleRemoveFolder)
+	http.HandleFunc("/removeInventory", handleRemoveInventory)
+	http.HandleFunc("/addInventory", handleAddInventory)
 }

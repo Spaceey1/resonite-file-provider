@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonite Asset Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <meta http-equiv="refresh" content="0; url='/login'" />
+    <style>
+        /* Ensure body doesn't show both auth and dashboard sections */
+        body {
+            height: 100vh;
+            overflow: hidden;
+        }
+        .redirect-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="redirect-message">
+            <div class="loading-spinner"></div>
+            <p>Redirecting to login page...</p>
+        </div>
+    </div>
+    <script>
+        // Redirect to login page
+        window.location.href = '/login';
+    </script>
+</body>
+</html>
