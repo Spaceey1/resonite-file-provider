@@ -252,7 +252,7 @@ func RemoveItem(itemId int) error {
 		for duplicate.Next() {
 			i++
 		}
-		if i == 1 {
+		if i <= 1 {
 			affectedAssetIds = append(affectedAssetIds, assetId)
 		}
 	}
