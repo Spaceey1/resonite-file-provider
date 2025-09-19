@@ -244,7 +244,17 @@ func RemoveItem(itemId int) error {
 	for rows.Next() {
 		var assetId int
 		rows.Scan(&assetId)
-		affectedAssetIds = append(affectedAssetIds, assetId)
+		duplicate, err := database.Db.Query("SELECT item_id FROM `hash-usage` WHERE hash_id = ?", assetId)
+		if err != nil {
+			return err
+		}
+		var i int
+		for duplicate.Next() {
+			i++
+		}
+		if i == 1 {
+			affectedAssetIds = append(affectedAssetIds, assetId)
+		}
 	}
 	_, err = database.Db.Exec("DELETE FROM `hash-usage` WHERE item_id = ?", itemId)
 	_, err = database.Db.Exec("DELETE FROM Items WHERE id = ?", itemId)
