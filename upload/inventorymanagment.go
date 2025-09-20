@@ -244,7 +244,7 @@ func RemoveItem(itemId int) error {
 	for rows.Next() {
 		var assetId int
 		rows.Scan(&assetId)
-		duplicate, err := database.Db.Query("SELECT item_id FROM `hash-usage` WHERE hash_id = ?", assetId)
+		duplicate, err := database.Db.Query("SELECT item_id FROM `hash-usage` WHERE asset_id = ?", assetId)
 		if err != nil {
 			return err
 		}
