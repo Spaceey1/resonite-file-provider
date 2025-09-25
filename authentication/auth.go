@@ -2,12 +2,13 @@ package authentication
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"resonite-file-provider/database"
 	"strings"
-	"encoding/json"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -119,7 +120,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Logout handler"))
 }
 
-func AuthCheck(w http.ResponseWriter, r *http.Request) (*Claims) {
+func AuthCheck(w http.ResponseWriter, r *http.Request) *Claims {
 	// Log cookies
 	cookies := r.Cookies()
 	fmt.Println("[AUTH] Request cookies:", cookies)
@@ -140,12 +141,15 @@ func AuthCheck(w http.ResponseWriter, r *http.Request) (*Claims) {
 		// Log debug information
 		fmt.Println("[AUTH] No auth token found in cookie or query param")
 
-		// Return JSON error instead of HTML error
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"success": false,
-			"error":   "Auth token missing",
-		})
+		if strings.HasPrefix(r.UserAgent(), "Resonite") {
+			http.Error(w, "No auth token found in param", http.StatusUnauthorized)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Auth token missing",
+			})
+		}
 		return nil
 	}
 	claims, err := ParseToken(auth)
