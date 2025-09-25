@@ -335,7 +335,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 				"name": folderNamesTrack[i],
 			})
 		}
-			// Get parent folder info
+		// Get parent folder info
 		var parentInfo *ParentFolderInfo
 		var parentID sql.NullInt64
 		var parentName sql.NullString

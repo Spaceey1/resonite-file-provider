@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"database/sql"
 	"resonite-file-provider/authentication"
 	"resonite-file-provider/config"
 	"resonite-file-provider/database"
@@ -205,9 +206,9 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("[UPLOAD] Failed to write file:", err)
 				return
 			}
-			var id int
+			var id sql.NullInt64
 			err = database.Db.QueryRow("SELECT id FROM `Assets` WHERE `hash` = ?", filepath.Base(f.Name)).Scan(&id)
-			if err == nil {
+			if err == sql.ErrNoRows {
 				assetInsertResult, err := database.Db.Exec("INSERT INTO `Assets` (`hash`) VALUES (?)", filepath.Base(f.Name))
 				if err == nil {
 					assetId, err := assetInsertResult.LastInsertId()
@@ -222,12 +223,16 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 						fmt.Println("[UPLOAD] Failed to link item to new asset:", err)
 					}
 				}
-			} else {
-				_, err := database.Db.Exec("INSERT INTO `hash-usage` (`asset_id`, `item_id`) VALUES (?, ?)", id, itemId)
+			} else if err == nil && id.Valid {
+				_, err := database.Db.Exec("INSERT INTO `hash-usage` (`asset_id`, `item_id`) VALUES (?, ?)", id.Int64, itemId)
 				if err != nil {
 					http.Error(w, "Failed to get last insert id on existing hash", http.StatusInternalServerError)
 					fmt.Println("[UPLOAD] Failed to get last insert id on existing hash:", err)
 				}
+			} else {
+				http.Error(w, "Failed to add asset id to DB", http.StatusInternalServerError)
+				fmt.Println("[UPLOAD] Failed to add asset id to DB:", err)
+				return
 			}
 		}
 		fmt.Println("[UPLOAD] Uploaded file:", f.Name)
