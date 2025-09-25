@@ -12,7 +12,7 @@ services:
     volumes:
       - ./live-data/assets:/app/assets
       - ./upload-site:/app/upload-site
-      - ./live-data/config.toml:/app/config.toml
+      - ./live-data/config:/app/data
 #      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
     depends_on:
       - db

@@ -25,7 +25,7 @@ WORKDIR /app
 
 # Copy binary from build stage
 COPY --from=builder /app/resonite-file-provider .
-COPY --from=builder /app/config.toml .
+COPY --from=builder /app/data/config.toml ./data/
 
 # Create ResoniteFilehost directory since it's expected by the system
 # RUN mkdir -p ./ResoniteFilehost
@@ -34,9 +34,6 @@ COPY --from=builder /app/config.toml .
 # Create required directories
 RUN mkdir -p ./assets
 RUN mkdir -p ./certs
-COPY ./config.toml /app/config.toml
-COPY ./upload-site /app/upload-site
-COPY ./resonite-inventory-schema.sql /app/resonite-inventory-schema.sql
 
 # Expose ports
 EXPOSE 5819

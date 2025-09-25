@@ -28,7 +28,7 @@ var config Config
 
 func GetConfig() Config {
 	if config == (Config{}) {
-		toml.DecodeFile("config.toml", &config)
+		toml.DecodeFile("data/config.toml", &config)
 	}
 	return config
 }
