@@ -3,13 +3,14 @@ package upload
 import (
 	"archive/zip"
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"database/sql"
+	"regexp"
 	"resonite-file-provider/authentication"
 	"resonite-file-provider/config"
 	"resonite-file-provider/database"
@@ -48,6 +49,30 @@ func mapRecursiveReplace(data interface{}, old string, new string) interface{} {
 	default:
 		return v
 	}
+}
+
+func mapRecursiveFind(data interface{}, searchRegex regexp.Regexp) []string {
+	var result []string
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for _, value := range v {
+			result = append(result, mapRecursiveFind(value, searchRegex)...)
+		}
+	case []interface{}:
+		for _, value := range v {
+			result = append(result, mapRecursiveFind(value, searchRegex)...)
+		}
+	case primitive.A:
+		for _, value := range v {
+			result = append(result, mapRecursiveFind(value, searchRegex)...)
+		}
+	case string:
+		matches := searchRegex.FindStringSubmatch(v)
+		if matches != nil{
+			return []string{matches[1]}
+		}
+	}
+	return result
 }
 
 func writeBrson(doc map[string]interface{}) ([]byte, error) {
@@ -256,6 +281,15 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		prefix = "http://"
 	}
 	assetUrl := prefix + filepath.Join(config.GetConfig().Server.Host+":"+strconv.Itoa(config.GetConfig().Server.Port), "assets")
+	oldUsedAssets := mapRecursiveFind(brsonData, *regexp.MustCompile(assetUrl + "/(.+)"))
+	for asset := range oldUsedAssets {
+		var assetId int
+		err := database.Db.QueryRow("SELECT `id` FROM `Assets` WHERE `hash` = ?", asset).Scan(&assetId)
+		if err != nil {
+			fmt.Println("[UPLOAD] failed to add old assets to new item", err)
+		}
+		_, err = database.Db.Exec("INSERT INTO `hash-usage` (`asset_id`, `item_id`) VALUES (?, ?)", assetId, itemId)
+	}
 	newBrsonData := mapRecursiveReplace(brsonData, "packdb://", assetUrl)
 	newBrson, err := writeBrson(newBrsonData.(map[string]interface{}))
 	os.WriteFile(filepath.Join(config.GetConfig().Server.AssetsPath, assetFilename)+".brson", newBrson, 0644)
