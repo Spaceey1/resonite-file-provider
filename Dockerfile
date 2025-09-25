@@ -26,7 +26,7 @@ RUN git -C / clone https://github.com/Spaceey1/resonite-file-provider
 # Copy binary from build stage
 COPY --from=builder /app/resonite-file-provider .
 COPY --from=builder /app/config.toml .
-COPY /resonite-file-provider/upload-site .
+COPY --from=builder /app/upload-site .
 
 # Create ResoniteFilehost directory since it's expected by the system
 # RUN mkdir -p ./ResoniteFilehost
