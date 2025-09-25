@@ -37,9 +37,9 @@ func main() {
 	go upload.StartWebServer()
 
 	if _, err := os.Stat("./certs"); os.IsNotExist(err) ||
-		config.GetConfig().Server.Host == "localhost" ||
-		config.GetConfig().Server.Host == "0.0.0.0" ||
-		config.GetConfig().Server.Host == "127.0.0.1" ||
+		os.Getenv("HOST") == "localhost" ||
+		os.Getenv("HOST") == "0.0.0.0" ||
+		os.Getenv("HOST") == "127.0.0.1" ||
 		environment.GetEnvAsBool("BEHIND_PROXY", false) == true {
 		println("HTTP Mode is running. Unless testing or behind a Reverse Proxy this is not recomended!")
 		log.Fatal(server.ListenAndServe())

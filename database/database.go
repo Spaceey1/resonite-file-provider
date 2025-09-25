@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"resonite-file-provider/config"
 	"time"
 
@@ -10,16 +11,17 @@ import (
 )
 
 var Db *sql.DB
+
 func Connect() {
 	cfg := config.GetConfig().Database
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
-	    cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name,
+		os.Getenv("MARIADB_USER"), os.Getenv("MARIADB_PASSWORD"), cfg.Host, cfg.Port, os.Getenv("MARIADB_DATABASE"),
 	)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		panic(err)
 	}
-	for attempt := 0; attempt < config.GetConfig().Database.MaxTries; attempt++{
+	for attempt := 0; attempt < config.GetConfig().Database.MaxTries; attempt++ {
 		err := db.Ping()
 		if err == nil {
 			Db = db

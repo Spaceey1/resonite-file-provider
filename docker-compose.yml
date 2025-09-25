@@ -16,7 +16,7 @@ services:
       JWT_SECRET_KEY: "TestkeyPLSCHANGEME!!!!!"
       TZ: "UTC"
       HOST: "localhost" # CHANGE TO YOUR DOMAIN
-      PORT: 5819 #set to what you want the server port to be externally
+      PORT: "5819" #set to what you want the server port to be externally
     ports:
       - "5819:5819"
     volumes:

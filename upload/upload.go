@@ -280,7 +280,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.TLS == nil && !environment.GetEnvAsBool("BEHIND_PROXY", false) {
 		prefix = "http://"
 	}
-	assetUrl := prefix + filepath.Join(config.GetConfig().Server.Host+":"+strconv.Itoa(config.GetConfig().Server.Port), "assets")
+	assetUrl := prefix + filepath.Join(os.Getenv("HOST")+":"+os.Getenv("PORT"), "assets")
 	oldUsedAssets := mapRecursiveFind(brsonData, *regexp.MustCompile(assetUrl + "/(.+)"))
 	for asset := range oldUsedAssets {
 		var assetId int
