@@ -3,6 +3,8 @@ FROM golang:1.24 AS builder
 
 WORKDIR /app
 
+RUN git -C /app/ pull https://github.com/Spaceey1/resonite-file-provider
+
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 

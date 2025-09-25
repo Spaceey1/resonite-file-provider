@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: ghcr.io/spaceey1/resonite-file-provider:latest
     container_name: resonite-file-provider
     restart: always
     environment:
@@ -12,6 +12,7 @@ services:
     volumes:
       - ./live-data/assets:/app/assets
       - ./upload-site:/app/upload-site
+      - ./live-data/config.toml:/app/config.toml
 #      - /etc/resonite-inventory/jwt.key:/run/secrets/jwt.key
     depends_on:
       - db
