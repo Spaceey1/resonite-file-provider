@@ -20,16 +20,15 @@ type DatabaseConfig struct {
 	Password string
 	Host     string
 	Port     int
-     	Name     string
-	MaxTries int;
+	Name     string
+	MaxTries int
 }
 
 var config Config
 
 func GetConfig() Config {
 	if config == (Config{}) {
-		toml.DecodeFile("data/config.toml", &config)
+		toml.DecodeFile("config.toml", &config)
 	}
 	return config
 }
-

@@ -25,7 +25,7 @@ func main() {
 	assethost.AddAssetListeners()
 	upload.AddListeners()
 
-	addr := fmt.Sprintf(":%d", config.GetConfig().Server.Port)
+	addr := fmt.Sprintf(":%d", 5819)
 
 	server := &http.Server{
 		Addr: addr,

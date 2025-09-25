@@ -1,14 +1,24 @@
+x-common:
+  database:
+    &db-env
+    # db-env needed to call vars later.
+    MARIADB_DATABASE: resonite-inventory
+    MARIADB_USER: resonite-inventory
+    MARIADB_PASSWORD: resonitepassword
 services:
   app:
     image: ghcr.io/spaceey1/resonite-file-provider:latest
     container_name: resonite-file-provider
     restart: always
     environment:
+      <<: *db-env
       BEHIND_PROXY: false
       JWT_SECRET_KEY: "TestkeyPLSCHANGEME!!!!!"
       TZ: "UTC"
+      HOST: "localhost" # CHANGE TO YOUR DOMAIN
+      PORT: 5819 #set to what you want the server port to be externally
     ports:
-      - "5819:5819"  # Server. SIDE NODE INTERNAL CONFIG AFFECTS INTERNAL PORT MAKE SURE TO MAKE SAME AS CONFIG PORT
+      - "5819:5819"
     volumes:
       - ./live-data/assets:/app/assets
       - ./upload-site:/app/upload-site
@@ -24,10 +34,8 @@ services:
     container_name: resonite-db
     restart: always
     environment:
+      <<: *db-env
       MARIADB_ROOT_PASSWORD: rootpassword
-      MARIADB_DATABASE: resonite-inventory
-      MARIADB_USER: resonite-inventory
-      MARIADB_PASSWORD: resonitepassword
     volumes:
       - ./live-data/mysql-data:/var/lib/mysql
       - ./live-data/mysql-logs:/var/log/mysql

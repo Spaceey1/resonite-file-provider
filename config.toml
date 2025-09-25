@@ -1,11 +1,11 @@
 [Database]
-user = "resonite-inventory"
-password = "resonitepassword"
+user = "${MARIADB_USER}"
+password = "${MARIADB_PASSWORD}"
 host = "resonite-db"
 port = 3306
-name = "resonite-inventory"
+name = "${MARIADB_DATABASE}"
 maxTries = 10
 [Server]
-host = "localhost" #change me!
-port =  5819
+host = "${HOST}"
+port = ${PORT}
 assetsPath = "./assets"
