@@ -3,8 +3,6 @@ FROM golang:1.24 AS builder
 
 WORKDIR /app
 
-RUN git -C /app/ pull https://github.com/Spaceey1/resonite-file-provider
-
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
@@ -36,6 +34,9 @@ COPY --from=builder /app/config.toml .
 # Create required directories
 RUN mkdir -p ./assets
 RUN mkdir -p ./certs
+COPY ./config.toml /app/config.toml
+COPY ./upload-site /app/upload-site
+COPY ./resonite-inventory-schema.sql /app/resonite-inventory-schema.sql
 
 # Expose ports
 EXPOSE 5819
