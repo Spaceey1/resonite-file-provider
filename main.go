@@ -8,7 +8,6 @@ import (
 	"os"
 	"resonite-file-provider/assethost"
 	"resonite-file-provider/authentication"
-	"resonite-file-provider/config"
 	"resonite-file-provider/database"
 	"resonite-file-provider/environment"
 	"resonite-file-provider/query"
