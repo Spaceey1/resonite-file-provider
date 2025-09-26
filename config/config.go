@@ -20,8 +20,8 @@ type DatabaseConfig struct {
 	Password string
 	Host     string
 	Port     int
-     	Name     string
-	MaxTries int;
+	Name     string
+	MaxTries int
 }
 
 var config Config
@@ -32,4 +32,3 @@ func GetConfig() Config {
 	}
 	return config
 }
-

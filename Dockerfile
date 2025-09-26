@@ -26,6 +26,7 @@ WORKDIR /app
 # Copy binary from build stage
 COPY --from=builder /app/resonite-file-provider .
 COPY --from=builder /app/config.toml .
+COPY --from=builder /app/upload-site .
 
 # Create ResoniteFilehost directory since it's expected by the system
 # RUN mkdir -p ./ResoniteFilehost

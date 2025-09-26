@@ -1,11 +1,6 @@
 [Database]
-user = "resonite-inventory"
-password = "resonitepassword"
 host = "resonite-db"
 port = 3306
-name = "resonite-inventory"
 maxTries = 10
 [Server]
-host = "localhost" #change me!
-port =  5819
 assetsPath = "./assets"
