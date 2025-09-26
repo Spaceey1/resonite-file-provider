@@ -304,4 +304,5 @@ func AddListeners() {
 	http.HandleFunc("/removeFolder", handleRemoveFolder)
 	http.HandleFunc("/removeInventory", handleRemoveInventory)
 	http.HandleFunc("/addInventory", handleAddInventory)
+	http.HandleFunc("/changeVisibility", HandleChangeItemVisibility)
 }

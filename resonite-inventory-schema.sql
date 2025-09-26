@@ -91,6 +91,7 @@ CREATE TABLE `Items` (
   `name` text NOT NULL,
   `folder_id` int(11) NOT NULL,
   `url` text NOT NULL,
+  `isPublic` BIT,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 

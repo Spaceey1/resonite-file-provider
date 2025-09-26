@@ -575,5 +575,52 @@ func handleRemoveInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("[INVENTORY] Successfully removed folder ID:", inventoryId)
+}
 
+func MakeAssetPublic(assetId int) error {
+       _, err := database.Db.Exec("UPDATE `Assets` SET `isPublic` = b'1' WHERE `Assets`.`id` = ?;", assetId)
+       return err;
+}
+
+func MakeAssetPrivate(assetId int) error {
+       _, err := database.Db.Exec("UPDATE `Assets` SET `isPublic` = b'0' WHERE `Assets`.`id` = ?;", assetId)
+       return err;
+}
+func HandleChangeItemVisibility(w http.ResponseWriter, r *http.Request){
+       if r.Method != http.MethodPost {
+               http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+               return
+       }
+       auth := r.URL.Query().Get("auth")
+       claims, err := authentication.ParseToken(auth)
+       if err != nil {
+               http.Error(w, "Auth token missing or invalid", http.StatusUnauthorized)
+       }
+       itemId, err := strconv.Atoi(r.URL.Query().Get("itemId"))
+       if err != nil {
+               http.Error(w, "itemId missing or invalid", http.StatusBadRequest)
+               return
+       }
+       visibility, err:= strconv.ParseBool(r.URL.Query().Get("public"))
+       if err != nil{
+               http.Error(w, "visibility is missing or invalid (Can be 1/0, true/false etc.)", http.StatusBadRequest)
+               return
+       }
+       var folderId int
+       database.Db.QueryRow("SELECT folder_id FROM Items WHERE id = ?", itemId).Scan(&folderId)
+       if allowed, err := query.IsFolderOwner(folderId, claims.UID); err != nil || !allowed {
+               http.Error(w, "Forbidden", http.StatusForbidden)
+               return
+       }
+       var assetId int
+       database.Db.QueryRow("SELECT id FROM Assets where hash = (SELECT url from Items where id = ? LIMIT 1)").Scan(&assetId)
+       if visibility{
+               err = MakeAssetPublic(assetId)
+       }else{
+               err = MakeAssetPrivate(assetId)
+       }
+       if err != nil {
+               http.Error(w, "Internal server error", http.StatusInternalServerError)
+               return
+       }
 }

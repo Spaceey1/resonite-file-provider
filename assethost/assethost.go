@@ -31,6 +31,15 @@ func handleRequest(next http.Handler) http.Handler {
 			http.Error(w, "Bad filename", http.StatusBadRequest)
 			return
 		}
+		var isPublic bool;
+		database.Db.QueryRow(`
+			SELECT isPublic from assets WHERE hash = ?
+			`,
+			strings.TrimSuffix(r.URL.Path, ".brson")).Scan(&isPublic)
+		if isPublic {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if !strings.HasSuffix(r.URL.Path, ".brson") {
 			next.ServeHTTP(w, r)
 			return
