@@ -27,13 +27,17 @@ func isOwnedBy(owner int, url string) bool {
 func handleRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/assets/")
+		if len(r.URL.Path) <= 0 {
+			http.Error(w, "Bad filename", http.StatusBadRequest)
+			return
+		}
 		if !strings.HasSuffix(r.URL.Path, ".brson") {
 			next.ServeHTTP(w, r)
 			return
 		}
 		claims := authentication.AuthCheck(w, r)
 		if claims == nil {
-			http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
+			http.Error(w, "Failed Auth", http.StatusUnauthorized)
 			return
 		}
 		uId := claims.UID
