@@ -2,6 +2,11 @@
 
 An asset hosting and inventory management system for Resonite VR files.
 
+# THIS SOFTWARE IS WIP. USE AT YOUR OWN RISK
+
+This software is wip and breaking changes are frequently made. At the moment the update process is manual.
+There might still be bugs that could lead to leaks of data/data loss and manual configuration is needed to use it securely. USE AT YOUR OWN RISK
+
 ## API Reference
 
 ### Authentication
