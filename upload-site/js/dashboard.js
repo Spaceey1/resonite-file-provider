@@ -74,7 +74,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bytes === 0) return '0 bytes';
         if (bytes < 1024) return bytes + ' bytes';
         else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-        else return (bytes / 1048576).toFixed(1) + ' MB';
+        else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+        else return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    // Format storage size (MB to appropriate unit)
+    function formatStorageSize(mb) {
+        if (mb === 0) return '0MB';
+        if (mb < 1024) return mb.toFixed(1) + 'MB';
+        else return (mb / 1024).toFixed(2) + 'GB';
     }
 
     // Load user storage information
@@ -114,8 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         storageBarFill.parentElement.style.display = 'none';
                     }
                     
-                    // Update storage text to show only usage
-                    storageText.textContent = `${data.storage_used_mb}MB used`;
+                    // Update storage text to show only usage with proper formatting
+                    storageText.textContent = `${formatStorageSize(data.storage_used_mb)} used`;
                     
                     // Show admin link if user is admin
                     if (data.is_admin && adminLink) {
