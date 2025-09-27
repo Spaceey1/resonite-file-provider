@@ -414,14 +414,17 @@ input:focus {
 }
 
 .folder, .inventory {
-    padding: 10px;
-    margin-bottom: 5px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-radius: 6px;
+    border-radius: 12px;
     transition: var(--transition);
+    position: relative;
+    background: rgba(108, 99, 255, 0.05);
+    border: 1px solid rgba(108, 99, 255, 0.1);
 }
 
 .folder:hover, .inventory:hover {
@@ -552,6 +555,7 @@ input:focus {
     flex-direction: column;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    position: relative;
 }
 
 .folder-item:hover {
@@ -562,7 +566,8 @@ input:focus {
 .folder-icon {
     font-size: 36px;
     color: #ffb74d;
-    margin-top: -30px;
+    margin-top: -10px;
+    margin-bottom: 10px;
     transition: var(--transition);
 }
 
@@ -627,7 +632,7 @@ input:focus {
     color: var(--text-color);
     width: 36px;
     height: 36px;
-    border-radius: 20%;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -636,59 +641,73 @@ input:focus {
     border: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
-.delete-item-side {
+/* Inventory delete button - fancy rounded corner design */
+.delete-inventory-btn {
     background-color: var(--error-color);
     color: var(--white);
-    width: 36px;
-    height: 36px;
-    border-radius: 20%;
+    width: 24px;
+    height: 24px;
+    border-radius: 0 8px 0 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: var(--transition);
     cursor: pointer;
     border: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    font-size: 14px;
-    padding: 0;
-    margin: 0;
+    box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+}
+
+.delete-inventory-btn i {
+    font-size: 10px;
     line-height: 1;
-    position: relative;
-}
-.delete-item-folder {
-    background-color: var(--error-color);
-    color: var(--white);
-    width: 36px;
-    height: 36px;
-    border-radius: 20%;
-    display: flex;
-    align-items: center;
-    align-self: self-end;
-    justify-content: center;
-    transition: var(--transition);
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-.delete-item-folder:hover {
-    background-color: var(--error-color);
-    color: var(--white);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-.delete-item-side i {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 14px;
-    line-height: 1;
 }
-.delete-item-side:hover {
+
+.delete-inventory-btn:hover {
+    background-color: #c62828;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.4);
+}
+
+/* Folder delete button - fancy rounded corner design */
+.delete-folder-btn {
     background-color: var(--error-color);
     color: var(--white);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    width: 28px;
+    height: 28px;
+    border-radius: 0 10px 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+}
+
+.delete-folder-btn i {
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-folder-btn:hover {
+    background-color: #c62828;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.4);
 }
 .item-link {
     color: var(--primary-color);
@@ -702,13 +721,13 @@ input:focus {
 }
 
 .delete-item {
-    background-color: var(--error-color);
-    color: var(--white);
+    color: var(--error-color);
+    background-color: var(--white);
 }
 
 .delete-item:hover {
-    background-color: var(--white);
-    color: var(--error-color);
+    background-color: var(--error-color);
+    color: var(--white);
     transform: translateY(-2px);
 }
 
