@@ -38,30 +38,40 @@ func GetChildFolders(folderId int) ([]int, []string, int, error) {
 	return childFoldersIds, childFoldersNames, parentFolderId, nil
 }
 
-func GetChildItems(folderId int) ([]int, []string, []string, error) {
-	items, err := database.Db.Query("SELECT id, name, url FROM Items where folder_id = ?", folderId)
+func GetChildItems(folderId int) ([]int, []string, []string, []int64, error) {
+	items, err := database.Db.Query(`
+		SELECT i.id, i.name, i.url, COALESCE(SUM(DISTINCT a.file_size_bytes), 0) as total_size
+		FROM Items i
+		LEFT JOIN `+"`hash-usage`"+` hu ON i.id = hu.item_id
+		LEFT JOIN Assets a ON hu.asset_id = a.id
+		WHERE i.folder_id = ?
+		GROUP BY i.id, i.name, i.url
+	`, folderId)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	var itemsIds []int
 	var itemsNames []string
 	var itemsUrls []string
+	var itemsSizes []int64
 	defer items.Close()
 
 	for items.Next() {
 		var id int
 		var name string
 		var url string
-		if err := items.Scan(&id, &name, &url); err != nil {
-			return nil, nil, nil, err
+		var size int64
+		if err := items.Scan(&id, &name, &url, &size); err != nil {
+			return nil, nil, nil, nil, err
 		}
 		itemsIds = append(itemsIds, id)
 		itemsNames = append(itemsNames, name)
 		itemsUrls = append(itemsUrls, filepath.Join("assets", url))
+		itemsSizes = append(itemsSizes, size)
 	}
 
-	return itemsIds, itemsNames, itemsUrls, nil
+	return itemsIds, itemsNames, itemsUrls, itemsSizes, nil
 }
 
 func GetSearchResults(query string, inventoryId int) ([]int, []string, []string, error) {
@@ -196,7 +206,7 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "You don't have access to this folder", http.StatusForbidden)
 		return
 	}
-	ids, names, urls, err := GetChildItems(folderId)
+	ids, names, urls, sizes, err := GetChildItems(folderId)
 	if strings.HasPrefix(r.UserAgent(), "Resonite") {
 		animation := animxmaker.Animation{
 			Tracks: []animxmaker.AnimationTrackWrapper{
@@ -219,6 +229,7 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 				"name": names[i],
 				"id":   ids[i],
 				"url":  urls[i],
+				"size": sizes[i],
 			})
 		}
 		data := map[string]any{
@@ -293,7 +304,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "You don't have access to this folder", http.StatusForbidden)
 		return
 	}
-	itemIdsTrack, itemNamesTrack, itemUrlsTrack, err := GetChildItems(folderId)
+	itemIdsTrack, itemNamesTrack, itemUrlsTrack, itemSizesTrack, err := GetChildItems(folderId)
 	if err != nil {
 		http.Error(w, "Error while getting items", http.StatusInternalServerError)
 		return
@@ -327,6 +338,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 				"id":   itemIdsTrack[i],
 				"name": itemNamesTrack[i],
 				"url":  itemUrlsTrack[i],
+				"size": itemSizesTrack[i],
 			})
 		}
 		for i := 0; i < len(folderIdsTrack); i++ {
