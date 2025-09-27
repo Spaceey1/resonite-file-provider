@@ -627,7 +627,7 @@ input:focus {
     color: var(--text-color);
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: 10%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -641,7 +641,7 @@ input:focus {
     color: var(--white);
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    border-radius: 10%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -655,7 +655,26 @@ input:focus {
     line-height: 1;
     position: relative;
 }
-
+.delete-item-folder {
+    background-color: var(--error-color);
+    color: var(--white);
+    width: 36px;
+    height: 36px;
+    border-radius: 10%;
+    display: flex;
+    align-items: self-end;
+    justify-content: center;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+.delete-item-folder:hover {
+    background-color: var(--error-color);
+    color: var(--white);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
 .delete-item-side i {
     position: absolute;
     top: 50%;
@@ -682,13 +701,13 @@ input:focus {
 }
 
 .delete-item {
-    color: var(--error-color);
-    background-color: var(--white);
+    background-color: var(--error-color);
+    color: var(--white);
 }
 
 .delete-item:hover {
-    background-color: var(--error-color);
-    color: var(--white);
+    background-color: var(--white);
+    color: var(--error-color);
     transform: translateY(-2px);
 }
 

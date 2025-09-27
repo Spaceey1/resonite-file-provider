@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderElement.className = 'folder-item';
                 folderElement.dataset.id = folder.id;
                 folderElement.innerHTML = `
-                    <button class="btn-small side-btn-danger delete-item-side" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
+                    <button class="btn-small side-btn-danger delete-item-folder" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
                     <div class="folder-icon">
                     <i class="fas fa-folder"></i></div>
                     <div class="folder-name">${folder.name}</div>

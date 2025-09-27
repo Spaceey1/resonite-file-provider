@@ -7,7 +7,7 @@ x-common:
     MARIADB_PASSWORD: resonitepassword
 services:
   app:
-    build: .
+    image: ghcr.io/spaceey1/resonite-file-provider:latest
     container_name: resonite-file-provider
     restart: always
     environment:
