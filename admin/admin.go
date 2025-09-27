@@ -82,7 +82,7 @@ func getUserStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get active users (logged in within last 30 days)
-	err = database.Db.QueryRow("SELECT COUNT(*) FROM Users WHERE last_login > DATE_SUB(NOW(), INTERVAL 30 DAY)").Scan(&stats.ActiveUsers)
+	err = database.Db.QueryRow("SELECT COUNT(*) FROM Users WHERE last_login > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)").Scan(&stats.ActiveUsers)
 	if err != nil {
 		http.Error(w, "Failed to get active user count", http.StatusInternalServerError)
 		return
