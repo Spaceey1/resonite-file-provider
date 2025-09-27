@@ -54,6 +54,9 @@ func runMigrations(db *sql.DB) error {
 	if err := ensureActiveSessionsTable(db); err != nil {
 		return err
 	}
+	if err := ensureInviteSystemTables(db); err != nil {
+		return err
+	}
 	if err := populateExistingAssetSizes(db); err != nil {
 		return err
 	}
@@ -171,6 +174,161 @@ func ensureActiveSessionsTable(db *sql.DB) error {
 	if _, err := db.Exec(createStmt); err != nil {
 		return fmt.Errorf("failed to ensure active_sessions table: %w", err)
 	}
+	return nil
+}
+
+func ensureInviteSystemTables(db *sql.DB) error {
+	// Create system_settings table
+	if err := ensureSystemSettingsTable(db); err != nil {
+		return err
+	}
+	
+	// Create invite_codes table
+	if err := ensureInviteCodesTable(db); err != nil {
+		return err
+	}
+	
+	// Create invite_code_usage table
+	if err := ensureInviteCodeUsageTable(db); err != nil {
+		return err
+	}
+	
+	// Add invite_code_used column to Users table
+	if err := ensureUsersInviteColumn(db); err != nil {
+		return err
+	}
+	
+	return nil
+}
+
+func ensureSystemSettingsTable(db *sql.DB) error {
+	exists, err := tableExists(db, "system_settings")
+	if err != nil {
+		return fmt.Errorf("failed to check system_settings table: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	
+	createStmt := `CREATE TABLE IF NOT EXISTS system_settings (
+		id INT(11) NOT NULL AUTO_INCREMENT,
+		setting_key VARCHAR(100) NOT NULL UNIQUE,
+		setting_value TEXT NOT NULL,
+		description TEXT,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		PRIMARY KEY (id)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`
+	
+	if _, err := db.Exec(createStmt); err != nil {
+		return fmt.Errorf("failed to create system_settings table: %w", err)
+	}
+	
+	// Insert default settings
+	defaultSettings := [][]string{
+		{"registration_enabled", "true", "Enable/disable public registration"},
+		{"require_invite_code", "false", "Require invite code for registration"},
+	}
+	
+	for _, setting := range defaultSettings {
+		_, err := db.Exec(`
+			INSERT IGNORE INTO system_settings (setting_key, setting_value, description) 
+			VALUES (?, ?, ?)
+		`, setting[0], setting[1], setting[2])
+		if err != nil {
+			return fmt.Errorf("failed to insert default setting %s: %w", setting[0], err)
+		}
+	}
+	
+	fmt.Println("Created system_settings table with default values")
+	return nil
+}
+
+func ensureInviteCodesTable(db *sql.DB) error {
+	exists, err := tableExists(db, "invite_codes")
+	if err != nil {
+		return fmt.Errorf("failed to check invite_codes table: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	
+	createStmt := `CREATE TABLE IF NOT EXISTS invite_codes (
+		id INT(11) NOT NULL AUTO_INCREMENT,
+		code VARCHAR(32) NOT NULL UNIQUE,
+		created_by INT(11) NOT NULL,
+		max_uses INT(11) DEFAULT 1,
+		current_uses INT(11) DEFAULT 0,
+		expires_at TIMESTAMP NULL,
+		is_active BOOLEAN DEFAULT TRUE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		PRIMARY KEY (id),
+		KEY created_by (created_by),
+		KEY code (code),
+		CONSTRAINT invite_codes_ibfk_1 FOREIGN KEY (created_by) REFERENCES Users (id) ON DELETE CASCADE
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`
+	
+	if _, err := db.Exec(createStmt); err != nil {
+		return fmt.Errorf("failed to create invite_codes table: %w", err)
+	}
+	
+	fmt.Println("Created invite_codes table")
+	return nil
+}
+
+func ensureInviteCodeUsageTable(db *sql.DB) error {
+	exists, err := tableExists(db, "invite_code_usage")
+	if err != nil {
+		return fmt.Errorf("failed to check invite_code_usage table: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	
+	createStmt := `CREATE TABLE IF NOT EXISTS invite_code_usage (
+		id INT(11) NOT NULL AUTO_INCREMENT,
+		invite_code_id INT(11) NOT NULL,
+		used_by INT(11) NOT NULL,
+		used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (id),
+		KEY invite_code_id (invite_code_id),
+		KEY used_by (used_by),
+		CONSTRAINT invite_code_usage_ibfk_1 FOREIGN KEY (invite_code_id) REFERENCES invite_codes (id) ON DELETE CASCADE,
+		CONSTRAINT invite_code_usage_ibfk_2 FOREIGN KEY (used_by) REFERENCES Users (id) ON DELETE CASCADE
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`
+	
+	if _, err := db.Exec(createStmt); err != nil {
+		return fmt.Errorf("failed to create invite_code_usage table: %w", err)
+	}
+	
+	fmt.Println("Created invite_code_usage table")
+	return nil
+}
+
+func ensureUsersInviteColumn(db *sql.DB) error {
+	exists, err := columnExists(db, "Users", "invite_code_used")
+	if err != nil {
+		return fmt.Errorf("failed to check Users.invite_code_used column: %w", err)
+	}
+	if exists {
+		return nil
+	}
+	
+	// Add the column
+	alter := "ALTER TABLE `Users` ADD COLUMN `invite_code_used` INT(11) NULL"
+	if _, err := db.Exec(alter); err != nil {
+		return fmt.Errorf("failed to add Users.invite_code_used column: %w", err)
+	}
+	
+	// Add the foreign key constraint
+	constraint := "ALTER TABLE `Users` ADD CONSTRAINT `users_invite_code_fk` FOREIGN KEY (`invite_code_used`) REFERENCES `invite_codes` (`id`) ON DELETE SET NULL"
+	if _, err := db.Exec(constraint); err != nil {
+		// If the constraint fails (e.g., because invite_codes table doesn't exist yet), 
+		// we'll ignore it as it will be added when the invite_codes table is created
+		fmt.Printf("Warning: Could not add foreign key constraint for invite_code_used: %v\n", err)
+	}
+	
+	fmt.Println("Added invite_code_used column to Users table")
 	return nil
 }
 

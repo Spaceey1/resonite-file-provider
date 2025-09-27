@@ -226,14 +226,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Create delete button separately and append it
                 const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn-small side-btn-danger delete-item-side';
+                deleteBtn.className = 'delete-inventory-btn';
                 deleteBtn.dataset.id = inventory.id;
                 deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
                 inventoryElement.appendChild(deleteBtn);
                 
                 inventoryElement.addEventListener('click', (e) => {
                     // Don't trigger if clicking the delete button
-                    if (e.target.closest('.delete-item-side')) return;
+                    if (e.target.closest('.delete-inventory-btn')) return;
                     
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
@@ -445,13 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderElement.className = 'folder-item';
                 folderElement.dataset.id = folder.id;
                 folderElement.innerHTML = `
-                    <button class="btn-small side-btn-danger delete-item-side" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
+                    <button class="delete-folder-btn" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
                     <div class="folder-icon">
                     <i class="fas fa-folder"></i></div>
                     <div class="folder-name">${folder.name}</div>
                 `;
                 // Add event listeners for item actions
-                const deleteButton = folderElement.querySelector('.delete-item-side');
+                const deleteButton = folderElement.querySelector('.delete-folder-btn');
                 if (deleteButton) {
                     deleteButton.addEventListener('click', (e) => {
                         e.stopPropagation();

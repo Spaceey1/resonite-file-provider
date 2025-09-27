@@ -232,6 +232,12 @@
                             <button id="nav-storage" onclick="showSection('storage')">
                                 <i class="fas fa-hdd"></i> Storage
                             </button>
+                            <button id="nav-invites" onclick="showSection('invites')">
+                                <i class="fas fa-ticket-alt"></i> Invite Codes
+                            </button>
+                            <button id="nav-settings" onclick="showSection('settings')">
+                                <i class="fas fa-cog"></i> Settings
+                            </button>
                         </nav>
                     </div>
                     <div class="user-info">
@@ -319,6 +325,70 @@
                     <div class="loading-spinner"></div> Loading storage details...
                 </div>
             </section>
+
+            <!-- Invite Codes Section -->
+            <section id="invites-section" class="admin-section">
+                <h2><i class="fas fa-ticket-alt"></i> Invite Code Management</h2>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <input type="text" id="invite-search" class="search-box" placeholder="Search invite codes...">
+                    <button id="create-invite-btn" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Create Invite Code
+                    </button>
+                </div>
+                
+                <div class="users-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Created By</th>
+                                <th>Uses</th>
+                                <th>Expires</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invites-table-body">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">
+                                    <div class="loading-spinner"></div> Loading invite codes...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="admin-section">
+                <h2><i class="fas fa-cog"></i> System Settings</h2>
+                
+                <div class="stat-card" style="max-width: 600px; text-align: left;">
+                    <h3><i class="fas fa-user-plus"></i> Registration Settings</h3>
+                    
+                    <div style="margin: 1.5rem 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="registration-enabled" style="transform: scale(1.2);">
+                            <span>Enable Public Registration</span>
+                        </label>
+                        <small style="color: #666; margin-left: 1.7rem;">Allow users to register without an invite code</small>
+                    </div>
+                    
+                    <div style="margin: 1.5rem 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="require-invite-code" style="transform: scale(1.2);">
+                            <span>Require Invite Code</span>
+                        </label>
+                        <small style="color: #666; margin-left: 1.7rem;">Force all registrations to use an invite code</small>
+                    </div>
+                    
+                    <button id="save-settings-btn" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </section>
         </div>
 
         <!-- Modals -->
@@ -355,6 +425,46 @@
             </div>
         </div>
 
+        <div id="create-invite-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-plus"></i> Create Invite Code</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="create-invite-form">
+                        <div class="input-group">
+                            <label for="invite-max-uses">Maximum Uses</label>
+                            <input type="number" id="invite-max-uses" min="1" value="1" required>
+                            <small>How many times this code can be used</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="invite-expires">Expires At (optional)</label>
+                            <input type="datetime-local" id="invite-expires">
+                            <small>Leave empty for no expiration</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Code
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="invite-usage-modal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-users"></i> Invite Code Usage</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="invite-usage-content">
+                        <div class="loading-spinner"></div> Loading usage details...
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="confirm-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -375,4 +485,3 @@
     <script src="js/admin.js"></script>
 </body>
 </html>
-
