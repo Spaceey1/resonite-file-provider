@@ -263,8 +263,8 @@ func ensureInviteCodesTable(db *sql.DB) error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
-		KEY created_by (created_by),
-		KEY code (code),
+		KEY idx_created_by (created_by),
+		KEY idx_code (code),
 		CONSTRAINT invite_codes_ibfk_1 FOREIGN KEY (created_by) REFERENCES Users (id) ON DELETE CASCADE
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;`
 	

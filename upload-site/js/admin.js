@@ -94,6 +94,7 @@ function updateStatsDisplay() {
     document.getElementById('total-users').textContent = currentStats.total_users || 0;
     document.getElementById('admin-users').textContent = currentStats.admin_users || 0;
     document.getElementById('active-users').textContent = currentStats.active_users || 0;
+    document.getElementById('current-users').textContent = currentStats.currently_logged_in_users || 0;
     
     const storageUsedGB = (currentStats.total_storage_used / 1024).toFixed(1);
     document.getElementById('storage-used').textContent = `${storageUsedGB}GB used`;

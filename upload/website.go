@@ -288,7 +288,7 @@ func getBreadcrumbPath(folderId int) ([]Breadcrumb, error) {
 	var path []Breadcrumb
 	currentFolderId := folderId
 
-	for currentFolderId != 0 {
+	for currentFolderId != 0 && currentFolderId != -1 {
 		var folder Breadcrumb
 		var parentID *int
 
@@ -299,16 +299,10 @@ func getBreadcrumbPath(folderId int) ([]Breadcrumb, error) {
 
 		path = append([]Breadcrumb{folder}, path...)
 
-		if parentID == nil {
+		if parentID == nil || *parentID == -1 {
 			break
 		}
 		currentFolderId = *parentID
-	}
-
-	// Add root
-	if len(path) == 0 || path[0].ID != 1 {
-		root := Breadcrumb{ID: 1, Name: "Root"}
-		path = append([]Breadcrumb{root}, path...)
 	}
 
 	return path, nil
