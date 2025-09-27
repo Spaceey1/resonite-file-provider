@@ -52,6 +52,7 @@ func GetChildFolders(folderId int) ([]int, []string, int, error) {
 func GetChildItems(folderId int) ([]int, []string, []string, []int64, error) {
 	log.Printf("[GetChildItems] Starting query for folderId: %d", folderId)
 	
+	// First, try the new schema with file_size_bytes
 	items, err := database.Db.Query(`
 		SELECT i.id, i.name, i.url, COALESCE(SUM(DISTINCT a.file_size_bytes), 0) as total_size
 		FROM Items i
@@ -60,10 +61,52 @@ func GetChildItems(folderId int) ([]int, []string, []string, []int64, error) {
 		WHERE i.folder_id = ?
 		GROUP BY i.id, i.name, i.url
 	`, folderId)
+	
+	// If the new schema query fails, fall back to the old schema
 	if err != nil {
-		log.Printf("[GetChildItems] ERROR: Failed to query child items for folderId: %d, error: %v", folderId, err)
-		return nil, nil, nil, nil, err
+		log.Printf("[GetChildItems] New schema query failed for folderId: %d, trying fallback query. Error: %v", folderId, err)
+		
+		// Fallback query for older schema without file_size_bytes
+		items, err = database.Db.Query(`
+			SELECT i.id, i.name, i.url
+			FROM Items i
+			WHERE i.folder_id = ?
+		`, folderId)
+		
+		if err != nil {
+			log.Printf("[GetChildItems] ERROR: Both queries failed for folderId: %d, error: %v", folderId, err)
+			return nil, nil, nil, nil, err
+		}
+		
+		log.Printf("[GetChildItems] Using fallback query (old schema) for folderId: %d", folderId)
+		defer items.Close()
+
+		var itemsIds []int
+		var itemsNames []string
+		var itemsUrls []string
+		var itemsSizes []int64
+
+		for items.Next() {
+			var id int
+			var name string
+			var url string
+			if err := items.Scan(&id, &name, &url); err != nil {
+				log.Printf("[GetChildItems] ERROR: Failed to scan child item row (fallback) for folderId: %d, error: %v", folderId, err)
+				return nil, nil, nil, nil, err
+			}
+			itemsIds = append(itemsIds, id)
+			itemsNames = append(itemsNames, name)
+			itemsUrls = append(itemsUrls, filepath.Join("assets", url))
+			itemsSizes = append(itemsSizes, 0) // Default size to 0 for old schema
+			log.Printf("[GetChildItems] Found child item (fallback): %s (ID: %d, Size: unknown) for folderId: %d", name, id, folderId)
+		}
+
+		log.Printf("[GetChildItems] Successfully retrieved %d child items (fallback) for folderId: %d", len(itemsIds), folderId)
+		return itemsIds, itemsNames, itemsUrls, itemsSizes, nil
 	}
+	
+	// New schema query succeeded
+	log.Printf("[GetChildItems] Using new schema query for folderId: %d", folderId)
 	defer items.Close()
 
 	var itemsIds []int

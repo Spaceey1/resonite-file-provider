@@ -38,6 +38,9 @@ func Connect() {
 }
 
 func runMigrations(db *sql.DB) error {
+	if err := ensureAssetsColumns(db); err != nil {
+		return err
+	}
 	if err := ensureUsersColumns(db); err != nil {
 		return err
 	}
@@ -49,6 +52,27 @@ func runMigrations(db *sql.DB) error {
 	}
 	if err := ensureActiveSessionsTable(db); err != nil {
 		return err
+	}
+	return nil
+}
+
+func ensureAssetsColumns(db *sql.DB) error {
+	columns := map[string]string{
+		"file_size_bytes": "BIGINT DEFAULT 0",
+	}
+	for column, definition := range columns {
+		exists, err := columnExists(db, "Assets", column)
+		if err != nil {
+			return fmt.Errorf("failed to check Assets.%s column: %w", column, err)
+		}
+		if exists {
+			continue
+		}
+		alter := fmt.Sprintf("ALTER TABLE `Assets` ADD COLUMN `%s` %s", column, definition)
+		if _, err := db.Exec(alter); err != nil {
+			return fmt.Errorf("failed to add Assets.%s column: %w", column, err)
+		}
+		fmt.Printf("Added column %s to Assets table\n", column)
 	}
 	return nil
 }
@@ -169,4 +193,3 @@ func columnExists(db *sql.DB, table, column string) (bool, error) {
 	}
 	return true, nil
 }
-
