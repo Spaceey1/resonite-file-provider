@@ -32,6 +32,32 @@ type UserStats struct {
 	TotalStorageQuota      int64 `json:"total_storage_quota"`
 }
 
+// InviteCode represents an invite code
+type InviteCode struct {
+	ID          int        `json:"id"`
+	Code        string     `json:"code"`
+	CreatedBy   int        `json:"created_by"`
+	CreatedByUsername string `json:"created_by_username"`
+	MaxUses     int        `json:"max_uses"`
+	CurrentUses int        `json:"current_uses"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	IsActive    bool       `json:"is_active"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+// InviteCodeUsage represents usage of an invite code
+type InviteCodeUsage struct {
+	ID       int       `json:"id"`
+	Username string    `json:"username"`
+	UsedAt   time.Time `json:"used_at"`
+}
+
+// SystemSettings represents system configuration
+type SystemSettings struct {
+	RegistrationEnabled bool `json:"registration_enabled"`
+	RequireInviteCode   bool `json:"require_invite_code"`
+}
+
 // AdminCheck verifies if the current user is an admin
 func AdminCheck(w http.ResponseWriter, r *http.Request) *authentication.Claims {
 	claims := authentication.AuthCheck(w, r)
@@ -422,6 +448,329 @@ func deleteUserAssetHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetSystemSettings returns current system settings
+func getSystemSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	var settings SystemSettings
+	
+	// Get registration enabled setting
+	var regEnabled string
+	err := database.Db.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'registration_enabled'").Scan(&regEnabled)
+	if err != nil {
+		settings.RegistrationEnabled = true // Default value
+	} else {
+		settings.RegistrationEnabled = regEnabled == "true"
+	}
+	
+	// Get require invite code setting
+	var requireInvite string
+	err = database.Db.QueryRow("SELECT setting_value FROM system_settings WHERE setting_key = 'require_invite_code'").Scan(&requireInvite)
+	if err != nil {
+		settings.RequireInviteCode = false // Default value
+	} else {
+		settings.RequireInviteCode = requireInvite == "true"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"data":    settings,
+	})
+}
+
+// UpdateSystemSettings updates system settings
+func updateSystemSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	var settings SystemSettings
+	if err := json.Unmarshal(body, &settings); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Update registration enabled setting
+	regValue := "false"
+	if settings.RegistrationEnabled {
+		regValue = "true"
+	}
+	_, err = database.Db.Exec(`
+		INSERT INTO system_settings (setting_key, setting_value, description) 
+		VALUES ('registration_enabled', ?, 'Enable/disable public registration')
+		ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+	`, regValue)
+	if err != nil {
+		http.Error(w, "Failed to update registration setting", http.StatusInternalServerError)
+		return
+	}
+
+	// Update require invite code setting
+	inviteValue := "false"
+	if settings.RequireInviteCode {
+		inviteValue = "true"
+	}
+	_, err = database.Db.Exec(`
+		INSERT INTO system_settings (setting_key, setting_value, description) 
+		VALUES ('require_invite_code', ?, 'Require invite code for registration')
+		ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+	`, inviteValue)
+	if err != nil {
+		http.Error(w, "Failed to update invite code setting", http.StatusInternalServerError)
+		return
+	}
+
+	// Log the admin action
+	LogAdminAction(claims.UID, "UPDATE_SETTINGS", nil, nil, 
+		fmt.Sprintf("Updated system settings: registration_enabled=%t, require_invite_code=%t", 
+			settings.RegistrationEnabled, settings.RequireInviteCode), r.RemoteAddr)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Settings updated successfully",
+	})
+}
+
+// GetInviteCodes returns all invite codes
+func getInviteCodesHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	rows, err := database.Db.Query(`
+		SELECT ic.id, ic.code, ic.created_by, u.username, ic.max_uses, ic.current_uses, 
+		       ic.expires_at, ic.is_active, ic.created_at
+		FROM invite_codes ic
+		JOIN Users u ON ic.created_by = u.id
+		ORDER BY ic.created_at DESC
+	`)
+	if err != nil {
+		http.Error(w, "Failed to get invite codes", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var inviteCodes []InviteCode
+	for rows.Next() {
+		var code InviteCode
+		var expiresAt sql.NullTime
+		
+		err := rows.Scan(&code.ID, &code.Code, &code.CreatedBy, &code.CreatedByUsername,
+			&code.MaxUses, &code.CurrentUses, &expiresAt, &code.IsActive, &code.CreatedAt)
+		if err != nil {
+			http.Error(w, "Failed to scan invite code data", http.StatusInternalServerError)
+			return
+		}
+		
+		if expiresAt.Valid {
+			code.ExpiresAt = &expiresAt.Time
+		}
+		
+		inviteCodes = append(inviteCodes, code)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"data":    inviteCodes,
+	})
+}
+
+// CreateInviteCode creates a new invite code
+func createInviteCodeHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
+
+	var request struct {
+		MaxUses   int    `json:"max_uses"`
+		ExpiresAt string `json:"expires_at,omitempty"`
+	}
+
+	if err := json.Unmarshal(body, &request); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Generate a random invite code
+	code := generateInviteCode()
+
+	// Parse expiration date if provided
+	var expiresAt *time.Time
+	if request.ExpiresAt != "" {
+		parsed, err := time.Parse("2006-01-02T15:04", request.ExpiresAt)
+		if err != nil {
+			http.Error(w, "Invalid expiration date format", http.StatusBadRequest)
+			return
+		}
+		expiresAt = &parsed
+	}
+
+	// Insert the invite code
+	_, err = database.Db.Exec(`
+		INSERT INTO invite_codes (code, created_by, max_uses, expires_at)
+		VALUES (?, ?, ?, ?)
+	`, code, claims.UID, request.MaxUses, expiresAt)
+	if err != nil {
+		http.Error(w, "Failed to create invite code", http.StatusInternalServerError)
+		return
+	}
+
+	// Log the admin action
+	LogAdminAction(claims.UID, "CREATE_INVITE_CODE", nil, nil, 
+		fmt.Sprintf("Created invite code: %s (max_uses: %d)", code, request.MaxUses), r.RemoteAddr)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Invite code created successfully",
+		"code":    code,
+	})
+}
+
+// DeleteInviteCode deletes an invite code
+func deleteInviteCodeHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	codeIDStr := r.URL.Query().Get("code_id")
+	if codeIDStr == "" {
+		http.Error(w, "Code ID required", http.StatusBadRequest)
+		return
+	}
+
+	codeID, err := strconv.Atoi(codeIDStr)
+	if err != nil {
+		http.Error(w, "Invalid code ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get code for logging
+	var code string
+	err = database.Db.QueryRow("SELECT code FROM invite_codes WHERE id = ?", codeID).Scan(&code)
+	if err != nil {
+		http.Error(w, "Invite code not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the invite code
+	_, err = database.Db.Exec("DELETE FROM invite_codes WHERE id = ?", codeID)
+	if err != nil {
+		http.Error(w, "Failed to delete invite code", http.StatusInternalServerError)
+		return
+	}
+
+	// Log the admin action
+	LogAdminAction(claims.UID, "DELETE_INVITE_CODE", nil, nil, 
+		fmt.Sprintf("Deleted invite code: %s", code), r.RemoteAddr)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Invite code deleted successfully",
+	})
+}
+
+// GetInviteCodeUsage returns usage details for an invite code
+func getInviteCodeUsageHandler(w http.ResponseWriter, r *http.Request) {
+	claims := AdminCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	codeIDStr := r.URL.Query().Get("code_id")
+	if codeIDStr == "" {
+		http.Error(w, "Code ID required", http.StatusBadRequest)
+		return
+	}
+
+	codeID, err := strconv.Atoi(codeIDStr)
+	if err != nil {
+		http.Error(w, "Invalid code ID", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := database.Db.Query(`
+		SELECT icu.id, u.username, icu.used_at
+		FROM invite_code_usage icu
+		JOIN Users u ON icu.used_by = u.id
+		WHERE icu.invite_code_id = ?
+		ORDER BY icu.used_at DESC
+	`, codeID)
+	if err != nil {
+		http.Error(w, "Failed to get invite code usage", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var usage []InviteCodeUsage
+	for rows.Next() {
+		var u InviteCodeUsage
+		err := rows.Scan(&u.ID, &u.Username, &u.UsedAt)
+		if err != nil {
+			http.Error(w, "Failed to scan usage data", http.StatusInternalServerError)
+			return
+		}
+		usage = append(usage, u)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"data":    usage,
+	})
+}
+
+// generateInviteCode generates a random invite code
+func generateInviteCode() string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const length = 8
+	
+	code := make([]byte, length)
+	for i := range code {
+		code[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		time.Sleep(1) // Simple way to get different values
+	}
+	return string(code)
+}
+
 // AddAdminListeners registers all admin endpoints
 func AddAdminListeners() {
 	http.HandleFunc("/admin/stats", getUserStatsHandler)
@@ -430,6 +779,14 @@ func AddAdminListeners() {
 	http.HandleFunc("/admin/users/admin-status", toggleAdminStatusHandler)
 	http.HandleFunc("/admin/users/assets", getUserAssetsHandler)
 	http.HandleFunc("/admin/users/assets/delete", deleteUserAssetHandler)
+	
+	// System settings endpoints
+	http.HandleFunc("/admin/settings", getSystemSettingsHandler)
+	http.HandleFunc("/admin/settings/update", updateSystemSettingsHandler)
+	
+	// Invite code endpoints
+	http.HandleFunc("/admin/invite-codes", getInviteCodesHandler)
+	http.HandleFunc("/admin/invite-codes/create", createInviteCodeHandler)
+	http.HandleFunc("/admin/invite-codes/delete", deleteInviteCodeHandler)
+	http.HandleFunc("/admin/invite-codes/usage", getInviteCodeUsageHandler)
 }
-
-
