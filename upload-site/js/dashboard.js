@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Function to load folder contents (folders and items)
-    async function loadFolderContents(folderId) {
+    async function loadFolderContents(folderId, addToHistory = true) {
         console.log("Loading contents for folder ID:", folderId);
         
         if (!elements.folderTree || !elements.itemsContainer) {
@@ -281,6 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (elements.parentFolderId) {
                 elements.parentFolderId.value = folderId;
+            }
+            
+            // Add to navigation history if requested
+            if (addToHistory) {
+                navigationHistory.add(folderId);
             }
             
             console.log("Fetching folder contents from API");
@@ -1039,6 +1044,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (elements.uploadPreview) {
                         elements.uploadPreview.classList.add('hidden');
                     }
+                }
+            });
+        }
+        
+        // Navigation buttons
+        const backBtn = document.getElementById('nav-back');
+        const forwardBtn = document.getElementById('nav-forward');
+        
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                if (!backBtn.disabled) {
+                    navigationHistory.back();
+                }
+            });
+        }
+        
+        if (forwardBtn) {
+            forwardBtn.addEventListener('click', () => {
+                if (!forwardBtn.disabled) {
+                    navigationHistory.forward();
                 }
             });
         }

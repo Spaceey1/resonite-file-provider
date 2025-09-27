@@ -107,20 +107,46 @@ func getUserStatsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get active users (logged in within last 30 days)
-	err = database.Db.QueryRow("SELECT COUNT(*) FROM Users WHERE last_login > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)").Scan(&stats.ActiveUsers)
+	// Get active users (logged in within last 30 days) - using portable SQL
+	thirtyDaysAgo := time.Now().UTC().AddDate(0, 0, -30)
+	err = database.Db.QueryRow("SELECT COUNT(*) FROM Users WHERE last_login > ?", thirtyDaysAgo).Scan(&stats.ActiveUsers)
 	if err != nil {
 		http.Error(w, "Failed to get active user count", http.StatusInternalServerError)
 		return
 	}
 
-	// Calculate actual storage used (deduplicated)
-	err = database.Db.QueryRow(`
-		SELECT COALESCE((SELECT SUM(DISTINCT file_size_bytes) FROM storage_usage) / 1048576, 0)
-	`).Scan(&stats.TotalStorageUsed)
+	// Get currently logged in users (active sessions)
+	now := time.Now().UTC()
+	err = database.Db.QueryRow("SELECT COUNT(DISTINCT user_id) FROM active_sessions WHERE expires_at > ?", now).Scan(&stats.CurrentlyLoggedInUsers)
 	if err != nil {
-		// If storage_usage table doesn't exist yet, default to 0
-		stats.TotalStorageUsed = 0
+		// If active_sessions table doesn't exist or has issues, default to 0
+		stats.CurrentlyLoggedInUsers = 0
+	}
+
+	// Calculate total storage used across all users (deduplicated by asset hash)
+	// First try using storage_usage table (preferred method)
+	err = database.Db.QueryRow(`
+		SELECT COALESCE(SUM(DISTINCT su.file_size_bytes) / 1048576, 0)
+		FROM storage_usage su
+		JOIN (
+			SELECT DISTINCT asset_hash, MIN(file_size_bytes) as file_size_bytes
+			FROM storage_usage
+			GROUP BY asset_hash
+		) dedup ON su.asset_hash = dedup.asset_hash AND su.file_size_bytes = dedup.file_size_bytes
+	`).Scan(&stats.TotalStorageUsed)
+	
+	if err != nil || stats.TotalStorageUsed == 0 {
+		// Fallback: calculate from Assets table directly (deduplicated by hash)
+		err = database.Db.QueryRow(`
+			SELECT COALESCE(SUM(a.file_size_bytes) / 1048576, 0)
+			FROM Assets a
+			WHERE a.file_size_bytes > 0
+		`).Scan(&stats.TotalStorageUsed)
+		
+		if err != nil {
+			// If both methods fail, default to 0
+			stats.TotalStorageUsed = 0
+		}
 	}
 	
 	// No quota system, so set quota to 0
