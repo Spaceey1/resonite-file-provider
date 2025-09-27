@@ -3,6 +3,7 @@ package query
 import (
 	"encoding/json"
 	"database/sql"
+	"log"
 	"net/http"
 	"path/filepath"
 	"resonite-file-provider/animxmaker"
@@ -13,55 +14,124 @@ import (
 )
 
 func GetChildFolders(folderId int) ([]int, []string, int, error) {
+	log.Printf("[GetChildFolders] Starting query for folderId: %d", folderId)
+	
 	childFolders, err := database.Db.Query("SELECT id, name FROM Folders where parent_folder_id = ?", folderId)
 	if err != nil {
+		log.Printf("[GetChildFolders] ERROR: Failed to query child folders for folderId: %d, error: %v", folderId, err)
 		return nil, nil, -1, err
 	}
+	defer childFolders.Close()
+	
 	var parentFolderId int
 	if err := database.Db.QueryRow("SELECT parent_folder_id FROM Folders WHERE id = ?", folderId).Scan(&parentFolderId); err != nil {
+		log.Printf("[GetChildFolders] ERROR: Failed to get parent folder ID for folderId: %d, error: %v", folderId, err)
 		return nil, nil, -1, err
 	}
+	log.Printf("[GetChildFolders] Found parent folder ID: %d for folderId: %d", parentFolderId, folderId)
+	
 	var childFoldersIds []int
 	var childFoldersNames []string
-	defer childFolders.Close()
 
 	for childFolders.Next() {
 		var id int
 		var name string
 		if err := childFolders.Scan(&id, &name); err != nil {
+			log.Printf("[GetChildFolders] ERROR: Failed to scan child folder row for folderId: %d, error: %v", folderId, err)
 			return nil, nil, -1, err
 		}
 		childFoldersIds = append(childFoldersIds, id)
 		childFoldersNames = append(childFoldersNames, name)
+		log.Printf("[GetChildFolders] Found child folder: %s (ID: %d) for parent folderId: %d", name, id, folderId)
 	}
 
+	log.Printf("[GetChildFolders] Successfully retrieved %d child folders for folderId: %d", len(childFoldersIds), folderId)
 	return childFoldersIds, childFoldersNames, parentFolderId, nil
 }
 
-func GetChildItems(folderId int) ([]int, []string, []string, error) {
-	items, err := database.Db.Query("SELECT id, name, url FROM Items where folder_id = ?", folderId)
+func GetChildItems(folderId int) ([]int, []string, []string, []int64, error) {
+	log.Printf("[GetChildItems] Starting query for folderId: %d", folderId)
+	
+	// First, try the new schema with file_size_bytes
+	items, err := database.Db.Query(`
+		SELECT i.id, i.name, i.url, COALESCE(SUM(DISTINCT a.file_size_bytes), 0) as total_size
+		FROM Items i
+		LEFT JOIN `+"`hash-usage`"+` hu ON i.id = hu.item_id
+		LEFT JOIN Assets a ON hu.asset_id = a.id
+		WHERE i.folder_id = ?
+		GROUP BY i.id, i.name, i.url
+	`, folderId)
+	
+	// If the new schema query fails, fall back to the old schema
 	if err != nil {
-		return nil, nil, nil, err
+		log.Printf("[GetChildItems] New schema query failed for folderId: %d, trying fallback query. Error: %v", folderId, err)
+		
+		// Fallback query for older schema without file_size_bytes
+		items, err = database.Db.Query(`
+			SELECT i.id, i.name, i.url
+			FROM Items i
+			WHERE i.folder_id = ?
+		`, folderId)
+		
+		if err != nil {
+			log.Printf("[GetChildItems] ERROR: Both queries failed for folderId: %d, error: %v", folderId, err)
+			return nil, nil, nil, nil, err
+		}
+		
+		log.Printf("[GetChildItems] Using fallback query (old schema) for folderId: %d", folderId)
+		defer items.Close()
+
+		var itemsIds []int
+		var itemsNames []string
+		var itemsUrls []string
+		var itemsSizes []int64
+
+		for items.Next() {
+			var id int
+			var name string
+			var url string
+			if err := items.Scan(&id, &name, &url); err != nil {
+				log.Printf("[GetChildItems] ERROR: Failed to scan child item row (fallback) for folderId: %d, error: %v", folderId, err)
+				return nil, nil, nil, nil, err
+			}
+			itemsIds = append(itemsIds, id)
+			itemsNames = append(itemsNames, name)
+			itemsUrls = append(itemsUrls, filepath.Join("assets", url))
+			itemsSizes = append(itemsSizes, 0) // Default size to 0 for old schema
+			log.Printf("[GetChildItems] Found child item (fallback): %s (ID: %d, Size: unknown) for folderId: %d", name, id, folderId)
+		}
+
+		log.Printf("[GetChildItems] Successfully retrieved %d child items (fallback) for folderId: %d", len(itemsIds), folderId)
+		return itemsIds, itemsNames, itemsUrls, itemsSizes, nil
 	}
+	
+	// New schema query succeeded
+	log.Printf("[GetChildItems] Using new schema query for folderId: %d", folderId)
+	defer items.Close()
 
 	var itemsIds []int
 	var itemsNames []string
 	var itemsUrls []string
-	defer items.Close()
+	var itemsSizes []int64
 
 	for items.Next() {
 		var id int
 		var name string
 		var url string
-		if err := items.Scan(&id, &name, &url); err != nil {
-			return nil, nil, nil, err
+		var size int64
+		if err := items.Scan(&id, &name, &url, &size); err != nil {
+			log.Printf("[GetChildItems] ERROR: Failed to scan child item row for folderId: %d, error: %v", folderId, err)
+			return nil, nil, nil, nil, err
 		}
 		itemsIds = append(itemsIds, id)
 		itemsNames = append(itemsNames, name)
 		itemsUrls = append(itemsUrls, filepath.Join("assets", url))
+		itemsSizes = append(itemsSizes, size)
+		log.Printf("[GetChildItems] Found child item: %s (ID: %d, Size: %d bytes) for folderId: %d", name, id, size, folderId)
 	}
 
-	return itemsIds, itemsNames, itemsUrls, nil
+	log.Printf("[GetChildItems] Successfully retrieved %d child items for folderId: %d", len(itemsIds), folderId)
+	return itemsIds, itemsNames, itemsUrls, itemsSizes, nil
 }
 
 func GetSearchResults(query string, inventoryId int) ([]int, []string, []string, error) {
@@ -94,19 +164,29 @@ func GetSearchResults(query string, inventoryId int) ([]int, []string, []string,
 }
 
 func IsFolderOwner(folderId int, userId int) (bool, error) {
+	log.Printf("[IsFolderOwner] Checking ownership for folderId: %d, userId: %d", folderId, userId)
+	
 	rows, err := database.Db.Query("SELECT id from Users WHERE id = (SELECT user_id from users_inventories where inventory_id = (SELECT inventory_id FROM Folders WHERE id = ?))", folderId)
 	if err != nil {
+		log.Printf("[IsFolderOwner] ERROR: Failed to query folder ownership for folderId: %d, userId: %d, error: %v", folderId, userId, err)
 		return false, err
 	}
+	defer rows.Close()
+	
 	for rows.Next() {
 		var currectUserId int
 		if err := rows.Scan(&currectUserId); err != nil {
+			log.Printf("[IsFolderOwner] ERROR: Failed to scan user ID for folderId: %d, userId: %d, error: %v", folderId, userId, err)
 			return false, err
 		}
+		log.Printf("[IsFolderOwner] Found authorized user: %d for folderId: %d", currectUserId, folderId)
 		if currectUserId == userId {
+			log.Printf("[IsFolderOwner] Access granted: user %d owns folderId: %d", userId, folderId)
 			return true, nil
 		}
 	}
+	
+	log.Printf("[IsFolderOwner] Access denied: user %d does not own folderId: %d", userId, folderId)
 	return false, nil
 }
 
@@ -196,7 +276,7 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "You don't have access to this folder", http.StatusForbidden)
 		return
 	}
-	ids, names, urls, err := GetChildItems(folderId)
+	ids, names, urls, sizes, err := GetChildItems(folderId)
 	if strings.HasPrefix(r.UserAgent(), "Resonite") {
 		animation := animxmaker.Animation{
 			Tracks: []animxmaker.AnimationTrackWrapper{
@@ -219,6 +299,7 @@ func listItems(w http.ResponseWriter, r *http.Request) {
 				"name": names[i],
 				"id":   ids[i],
 				"url":  urls[i],
+				"size": sizes[i],
 			})
 		}
 		data := map[string]any{
@@ -280,29 +361,54 @@ func listInventories(w http.ResponseWriter, r *http.Request) {
 
 // handles /query/folderContent
 func listFolderContents(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[FolderContents] Starting request for URL: %s", r.URL.String())
+	
 	folderId, err := strconv.Atoi(r.URL.Query().Get("folderId"))
 	if err != nil {
+		log.Printf("[FolderContents] ERROR: Invalid folderId parameter: %v", err)
 		http.Error(w, "folderId is either not specified or is invalid", http.StatusBadRequest)
+		return
 	}
+	log.Printf("[FolderContents] Processing request for folderId: %d", folderId)
+	
 	claims := authentication.AuthCheck(w, r)
 	if claims == nil {
+		log.Printf("[FolderContents] ERROR: Authentication failed for folderId: %d", folderId)
 		http.Error(w, "[FolderContents] Failed Auth", http.StatusUnauthorized)
 		return
 	}
-	if allowed, err := IsFolderOwner(folderId, claims.UID); !allowed || err != nil {
+	log.Printf("[FolderContents] Authentication successful for user: %d, folderId: %d", claims.UID, folderId)
+	
+	allowed, err := IsFolderOwner(folderId, claims.UID)
+	if err != nil {
+		log.Printf("[FolderContents] ERROR: Failed to check folder ownership for folderId: %d, userId: %d, error: %v", folderId, claims.UID, err)
+		http.Error(w, "Error checking folder access: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !allowed {
+		log.Printf("[FolderContents] ERROR: Access denied for user: %d, folderId: %d", claims.UID, folderId)
 		http.Error(w, "You don't have access to this folder", http.StatusForbidden)
 		return
 	}
-	itemIdsTrack, itemNamesTrack, itemUrlsTrack, err := GetChildItems(folderId)
+	log.Printf("[FolderContents] Access granted for user: %d, folderId: %d", claims.UID, folderId)
+	
+	log.Printf("[FolderContents] Fetching child items for folderId: %d", folderId)
+	itemIdsTrack, itemNamesTrack, itemUrlsTrack, itemSizesTrack, err := GetChildItems(folderId)
 	if err != nil {
-		http.Error(w, "Error while getting items", http.StatusInternalServerError)
+		log.Printf("[FolderContents] ERROR: Failed to get child items for folderId: %d, error: %v", folderId, err)
+		http.Error(w, "Error while getting items: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[FolderContents] Successfully fetched %d child items for folderId: %d", len(itemIdsTrack), folderId)
+	
+	log.Printf("[FolderContents] Fetching child folders for folderId: %d", folderId)
 	folderIdsTrack, folderNamesTrack, parentFolder, err := GetChildFolders(folderId)
 	if err != nil {
-		http.Error(w, "Error while getting folders", http.StatusInternalServerError)
+		log.Printf("[FolderContents] ERROR: Failed to get child folders for folderId: %d, error: %v", folderId, err)
+		http.Error(w, "Error while getting folders: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[FolderContents] Successfully fetched %d child folders for folderId: %d, parentFolder: %d", len(folderIdsTrack), folderId, parentFolder)
 	if strings.HasPrefix(r.UserAgent(), "Resonite") {
 		response := animxmaker.Animation{
 			Tracks: []animxmaker.AnimationTrackWrapper{
@@ -327,6 +433,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 				"id":   itemIdsTrack[i],
 				"name": itemNamesTrack[i],
 				"url":  itemUrlsTrack[i],
+				"size": itemSizesTrack[i],
 			})
 		}
 		for i := 0; i < len(folderIdsTrack); i++ {
@@ -336,6 +443,7 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		// Get parent folder info
+		log.Printf("[FolderContents] Fetching parent folder info for folderId: %d", folderId)
 		var parentInfo *ParentFolderInfo
 		var parentID sql.NullInt64
 		var parentName sql.NullString
@@ -347,17 +455,25 @@ func listFolderContents(w http.ResponseWriter, r *http.Request) {
 			WHERE id = ?
 		`, folderId).Scan(&parentID, &parentName)
 	
-		if err == nil && parentID.Valid && parentName.Valid {
+		if err != nil {
+			log.Printf("[FolderContents] WARNING: Failed to get parent folder info for folderId: %d, error: %v", folderId, err)
+		} else if parentID.Valid && parentName.Valid {
 			parentInfo = &ParentFolderInfo{
 				ID:   int(parentID.Int64),
 				Name: parentName.String,
 			}
+			log.Printf("[FolderContents] Found parent folder: %s (ID: %d) for folderId: %d", parentName.String, parentID.Int64, folderId)
+		} else {
+			log.Printf("[FolderContents] No parent folder found for folderId: %d (likely root folder)", folderId)
 		}
+		
 		data := map[string]any{
 			"items":   items,
 			"folders": folders,
 			"parent":  parentInfo,
 		}
+		
+		log.Printf("[FolderContents] Successfully completed request for folderId: %d, returning %d items and %d folders", folderId, len(items), len(folders))
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(data)
 	}

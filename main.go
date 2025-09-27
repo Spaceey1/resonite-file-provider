@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"resonite-file-provider/admin"
 	"resonite-file-provider/assethost"
 	"resonite-file-provider/authentication"
 	"resonite-file-provider/database"
@@ -23,6 +24,7 @@ func main() {
 	authentication.AddAuthListeners()
 	assethost.AddAssetListeners()
 	upload.AddListeners()
+	admin.AddAdminListeners() // Admin endpoints
 
 	addr := fmt.Sprintf(":%d", 5819)
 

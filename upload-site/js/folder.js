@@ -198,9 +198,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const folderId = folder.dataset.id;
                 if (folderId) {
-                    window.location.href = `/folder?id=${folderId}&auth=${authToken}`;
+                    // Use pushState to add to browser history for back/forward support
+                    const newUrl = `/folder?id=${folderId}&auth=${authToken}`;
+                    window.history.pushState({folderId: folderId}, '', newUrl);
+                    window.location.href = newUrl;
                 }
             });
+        });
+        
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', (event) => {
+            if (event.state && event.state.folderId) {
+                // Browser back/forward was used, reload the page
+                window.location.reload();
+            }
         });
         
         // Delete item functionality

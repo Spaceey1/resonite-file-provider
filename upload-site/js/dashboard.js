@@ -60,9 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.usernameDisplay.textContent = username;
         }
         
-        console.log("Auth verified, proceeding to load inventories");
-        // Load inventories
+        console.log("Auth verified, proceeding to load inventories and storage info");
+        // Load inventories and storage info
         loadInventories();
+        loadStorageInfo();
     }
 
     // Debug output when loading
@@ -70,9 +71,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Format file size for display
     function formatFileSize(bytes) {
+        if (bytes === 0) return '0 bytes';
         if (bytes < 1024) return bytes + ' bytes';
         else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-        else return (bytes / 1048576).toFixed(1) + ' MB';
+        else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+        else return (bytes / 1073741824).toFixed(2) + ' GB';
+    }
+
+    // Format storage size (MB to appropriate unit)
+    function formatStorageSize(mb) {
+        if (mb === 0) return '0MB';
+        if (mb < 1024) return mb.toFixed(1) + 'MB';
+        else return (mb / 1024).toFixed(2) + 'GB';
+    }
+
+    // Load user storage information
+    async function loadStorageInfo() {
+        console.log("Loading storage info");
+        
+        try {
+            const response = await fetch('/api/user/storage', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.log("Storage info not available (likely schema not updated yet)");
+                return;
+            }
+            
+            const data = await response.json();
+            console.log("Storage info:", data);
+            
+            if (data.success) {
+                // Update storage display
+                const storageInfo = document.getElementById('storage-info');
+                const storageBarFill = document.getElementById('storage-bar-fill');
+                const storageText = document.getElementById('storage-text');
+                const adminLink = document.getElementById('admin-link');
+                
+                if (storageInfo && storageText) {
+                    // Show storage info
+                    storageInfo.style.display = 'flex';
+                    
+                    // Hide storage bar since there's no quota
+                    if (storageBarFill) {
+                        storageBarFill.parentElement.style.display = 'none';
+                    }
+                    
+                    // Update storage text to show only usage with proper formatting
+                    storageText.textContent = `${formatStorageSize(data.storage_used_mb)} used`;
+                    
+                    // Show admin link if user is admin
+                    if (data.is_admin && adminLink) {
+                        adminLink.style.display = 'inline-block';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading storage info:', error);
+            // Don't show error to user as this is optional functionality
+        }
     }
     
     // Error handling for API requests
@@ -155,8 +217,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
                 //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
-                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <div><button class="btn-small side-btn-danger delete-item-side" data-id="${inventory.id}"><i class="fas fa-trash"></i></button></div>`;     
-                inventoryElement.addEventListener('click', () => {
+                // Create the main content container
+                const mainContent = document.createElement('div');
+                mainContent.style.display = 'flex';
+                mainContent.style.alignItems = 'center';
+                mainContent.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}`;
+                inventoryElement.appendChild(mainContent);
+                
+                // Create delete button separately and append it
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-inventory-btn';
+                deleteBtn.dataset.id = inventory.id;
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                inventoryElement.appendChild(deleteBtn);
+                
+                inventoryElement.addEventListener('click', (e) => {
+                    // Don't trigger if clicking the delete button
+                    if (e.target.closest('.delete-inventory-btn')) return;
+                    
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
                     
@@ -166,15 +244,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     inventoryElement.classList.add('active');
                 });
-                // Add event listeners for item actions
-                const deleteButton = inventoryElement.querySelector('.delete-item-side');
-                if (deleteButton) {
-                    deleteButton.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // Show delete confirmation
-                        showDeleteConfirmation(inventory.id, inventory.name, 'inventory');
-                    });
-                }
+                
+                // Add event listener for delete button
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Show delete confirmation
+                    showDeleteConfirmation(inventory.id, inventory.name, 'inventory');
+                });
                 
                 elements.inventoryTree.appendChild(inventoryElement);
             });
@@ -185,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Function to load folder contents (folders and items)
-    async function loadFolderContents(folderId) {
+    async function loadFolderContents(folderId, addToHistory = true) {
         console.log("Loading contents for folder ID:", folderId);
         
         if (!elements.folderTree || !elements.itemsContainer) {
@@ -205,6 +281,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (elements.parentFolderId) {
                 elements.parentFolderId.value = folderId;
+            }
+            
+            // Add to navigation history if requested
+            if (addToHistory) {
+                navigationHistory.add(folderId);
             }
             
             console.log("Fetching folder contents from API");
@@ -369,13 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 folderElement.className = 'folder-item';
                 folderElement.dataset.id = folder.id;
                 folderElement.innerHTML = `
-                    <button class="btn-small side-btn-danger delete-item-side" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
+                    <button class="delete-folder-btn" data-id="${folder.id}"><i class="fas fa-trash"></i></button>
                     <div class="folder-icon">
                     <i class="fas fa-folder"></i></div>
                     <div class="folder-name">${folder.name}</div>
                 `;
                 // Add event listeners for item actions
-                const deleteButton = folderElement.querySelector('.delete-item-side');
+                const deleteButton = folderElement.querySelector('.delete-folder-btn');
                 if (deleteButton) {
                     deleteButton.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -417,10 +498,16 @@ document.addEventListener('DOMContentLoaded', () => {
             itemElement.className = 'item';
             itemElement.dataset.id = item.id;
             
-            // Create item HTML with name and URL
+            // Format file size for display
+            const sizeText = item.size ? formatFileSize(item.size) : '0 bytes';
+            
+            // Create item HTML with name, size, and URL
             itemElement.innerHTML = `
                 <div class="item-icon"><i class="fas fa-file"></i></div>
-                <div class="item-name">${item.name}</div>
+                <div class="item-name">
+                    ${item.name}
+                    <div class="item-size" style="color: #7c73ff; font-size: 0.85rem; margin-top: 2px;">${sizeText}</div>
+                </div>
                 <div class="item-actions">
                     <a href="${item.url}.brson" class="btn btn-small" target="_blank">
                         <i class="fas fa-download"></i> Download
@@ -540,6 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentFolderId) {
                         loadFolderContents(currentFolderId);
                     }
+                    
+                    // Refresh storage info after deletion
+                    loadStorageInfo();
                     
                 } catch (error) {
                     console.error(`Error deleting ${type}:`, error);
@@ -914,6 +1004,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         loadFolderContents(currentFolderId);
                     }
                     
+                    // Refresh storage info after upload
+                    loadStorageInfo();
+                    
                 } catch (error) {
                     console.error("Error uploading file:", error);
                     alert("Error uploading file: " + error.message);
@@ -951,6 +1044,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (elements.uploadPreview) {
                         elements.uploadPreview.classList.add('hidden');
                     }
+                }
+            });
+        }
+        
+        // Navigation buttons
+        const backBtn = document.getElementById('nav-back');
+        const forwardBtn = document.getElementById('nav-forward');
+        
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                if (!backBtn.disabled) {
+                    navigationHistory.back();
+                }
+            });
+        }
+        
+        if (forwardBtn) {
+            forwardBtn.addEventListener('click', () => {
+                if (!forwardBtn.disabled) {
+                    navigationHistory.forward();
                 }
             });
         }
