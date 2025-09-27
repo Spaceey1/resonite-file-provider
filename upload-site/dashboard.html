@@ -6,6 +6,7 @@
     <title>Resonite Asset Manager - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <script src="js/theme.js"></script>
     <style>
         /* Dashboard-specific styling */
         #auth-section {
@@ -35,6 +36,54 @@
             overflow-y: auto;
             height: 100%;
         }
+        
+        /* Storage info styling */
+        .storage-info {
+            margin-right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .storage-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .storage-bar {
+            width: 120px;
+            height: 10px;
+            background: var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .storage-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #28a745 60%, #ffc107 80%, #dc3545 100%);
+            transition: width 0.3s ease;
+            width: 0%;
+            border-radius: 4px;
+        }
+        
+        #storage-text {
+            font-size: 0.85rem;
+            color: var(--text-color);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        /* Dark theme storage bar adjustments */
+        [data-theme="dark"] .storage-bar {
+            background: var(--border-color);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        [data-theme="dark"] #storage-text {
+            color: var(--text-light);
+        }
     </style>
 </head>
 <body>
@@ -45,7 +94,23 @@
                 <div class="container">
                     <div class="logo">Resonite<span>Assets</span></div>
                     <div class="user-info">
+                        <div id="storage-info" class="storage-info" style="display: none;">
+                            <div class="storage-bar-container">
+                                <div class="storage-bar">
+                                    <div id="storage-bar-fill" class="storage-bar-fill"></div>
+                                </div>
+                                <span id="storage-text">0MB / 0MB</span>
+                            </div>
+                        </div>
                         <span id="username-display"></span>
+                        <div id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+                            <div class="theme-toggle-slider">
+                                <i class="theme-toggle-icon fas fa-sun"></i>
+                            </div>
+                        </div>
+                        <a id="admin-link" href="/admin" class="btn btn-small" style="display: none;">
+                            <i class="fas fa-user-shield"></i> Admin
+                        </a>
                         <a href="/logout" class="btn btn-small"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>

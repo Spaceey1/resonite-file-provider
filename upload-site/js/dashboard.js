@@ -60,9 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.usernameDisplay.textContent = username;
         }
         
-        console.log("Auth verified, proceeding to load inventories");
-        // Load inventories
+        console.log("Auth verified, proceeding to load inventories and storage info");
+        // Load inventories and storage info
         loadInventories();
+        loadStorageInfo();
     }
 
     // Debug output when loading
@@ -70,9 +71,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Format file size for display
     function formatFileSize(bytes) {
+        if (bytes === 0) return '0 bytes';
         if (bytes < 1024) return bytes + ' bytes';
         else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
         else return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // Load user storage information
+    async function loadStorageInfo() {
+        console.log("Loading storage info");
+        
+        try {
+            const response = await fetch('/api/user/storage', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                console.log("Storage info not available (likely schema not updated yet)");
+                return;
+            }
+            
+            const data = await response.json();
+            console.log("Storage info:", data);
+            
+            if (data.success) {
+                // Update storage display
+                const storageInfo = document.getElementById('storage-info');
+                const storageBarFill = document.getElementById('storage-bar-fill');
+                const storageText = document.getElementById('storage-text');
+                const adminLink = document.getElementById('admin-link');
+                
+                if (storageInfo && storageText) {
+                    // Show storage info
+                    storageInfo.style.display = 'flex';
+                    
+                    // Hide storage bar since there's no quota
+                    if (storageBarFill) {
+                        storageBarFill.parentElement.style.display = 'none';
+                    }
+                    
+                    // Update storage text to show only usage
+                    storageText.textContent = `${data.storage_used_mb}MB used`;
+                    
+                    // Show admin link if user is admin
+                    if (data.is_admin && adminLink) {
+                        adminLink.style.display = 'inline-block';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error loading storage info:', error);
+            // Don't show error to user as this is optional functionality
+        }
     }
     
     // Error handling for API requests
@@ -155,8 +209,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 inventoryElement.className = 'inventory';
                 inventoryElement.dataset.id = inventory.id;
                 //inventoryElement.dataset.rootFolderId = inventory.rootFolderId;
-                inventoryElement.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}  <div><button class="btn-small side-btn-danger delete-item-side" data-id="${inventory.id}"><i class="fas fa-trash"></i></button></div>`;     
-                inventoryElement.addEventListener('click', () => {
+                // Create the main content container
+                const mainContent = document.createElement('div');
+                mainContent.style.display = 'flex';
+                mainContent.style.alignItems = 'center';
+                mainContent.innerHTML = `<i class="fas fa-box"></i> ${inventory.name}`;
+                inventoryElement.appendChild(mainContent);
+                
+                // Create delete button separately and append it
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-small side-btn-danger delete-item-side';
+                deleteBtn.dataset.id = inventory.id;
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                inventoryElement.appendChild(deleteBtn);
+                
+                inventoryElement.addEventListener('click', (e) => {
+                    // Don't trigger if clicking the delete button
+                    if (e.target.closest('.delete-item-side')) return;
+                    
                     currentInventoryId = inventory.id;
                     loadRootFolder(inventory.id);
                     
@@ -166,15 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     inventoryElement.classList.add('active');
                 });
-                // Add event listeners for item actions
-                const deleteButton = inventoryElement.querySelector('.delete-item-side');
-                if (deleteButton) {
-                    deleteButton.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // Show delete confirmation
-                        showDeleteConfirmation(inventory.id, inventory.name, 'inventory');
-                    });
-                }
+                
+                // Add event listener for delete button
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Show delete confirmation
+                    showDeleteConfirmation(inventory.id, inventory.name, 'inventory');
+                });
                 
                 elements.inventoryTree.appendChild(inventoryElement);
             });
@@ -417,10 +485,16 @@ document.addEventListener('DOMContentLoaded', () => {
             itemElement.className = 'item';
             itemElement.dataset.id = item.id;
             
-            // Create item HTML with name and URL
+            // Format file size for display
+            const sizeText = item.size ? formatFileSize(item.size) : '0 bytes';
+            
+            // Create item HTML with name, size, and URL
             itemElement.innerHTML = `
                 <div class="item-icon"><i class="fas fa-file"></i></div>
-                <div class="item-name">${item.name}</div>
+                <div class="item-name">
+                    ${item.name}
+                    <div class="item-size" style="color: #7c73ff; font-size: 0.85rem; margin-top: 2px;">${sizeText}</div>
+                </div>
                 <div class="item-actions">
                     <a href="${item.url}.brson" class="btn btn-small" target="_blank">
                         <i class="fas fa-download"></i> Download
@@ -540,6 +614,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentFolderId) {
                         loadFolderContents(currentFolderId);
                     }
+                    
+                    // Refresh storage info after deletion
+                    loadStorageInfo();
                     
                 } catch (error) {
                     console.error(`Error deleting ${type}:`, error);
@@ -913,6 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentFolderId) {
                         loadFolderContents(currentFolderId);
                     }
+                    
+                    // Refresh storage info after upload
+                    loadStorageInfo();
                     
                 } catch (error) {
                     console.error("Error uploading file:", error);

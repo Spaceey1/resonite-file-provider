@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"resonite-file-provider/database"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -57,12 +58,72 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hashedPassword := hashPassword(password)
-	_, err = database.Db.Exec("INSERT INTO `Users`(`username`, `auth`) VALUES (?, ?); ", username, hashedPassword)
+	
+	// Start transaction to create user and default inventory
+	tx, err := database.Db.Begin()
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)
-		fmt.Println("Insert error:", err)
+		fmt.Println("Transaction error:", err)
 		return
 	}
+	defer tx.Rollback()
+	
+	// Insert user
+	result, err := tx.Exec("INSERT INTO `Users`(`username`, `auth`) VALUES (?, ?)", username, hashedPassword)
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Insert user error:", err)
+		return
+	}
+	
+	// Get the new user ID
+	userID, err := result.LastInsertId()
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Get user ID error:", err)
+		return
+	}
+	
+	// Create default inventory
+	inventoryResult, err := tx.Exec("INSERT INTO `Inventories`(`name`) VALUES (?)", "Inventory")
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Insert inventory error:", err)
+		return
+	}
+	
+	// Get the new inventory ID
+	inventoryID, err := inventoryResult.LastInsertId()
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Get inventory ID error:", err)
+		return
+	}
+	
+	// Link user to inventory
+	_, err = tx.Exec("INSERT INTO `users_inventories`(`user_id`, `inventory_id`) VALUES (?, ?)", userID, inventoryID)
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Link user to inventory error:", err)
+		return
+	}
+	
+	// Create root folder for the inventory
+	_, err = tx.Exec("INSERT INTO `Folders`(`name`, `parent_folder_id`, `inventory_id`) VALUES (?, ?, ?)", "Root", -1, inventoryID)
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Create root folder error:", err)
+		return
+	}
+	
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Commit error:", err)
+		return
+	}
+	
+	fmt.Printf("User registered successfully: %s with default inventory\n", username)
 	w.Write([]byte("User registered successfully"))
 }
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,9 +148,27 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
+	_, err = database.Db.Exec("UPDATE Users SET last_login = ? WHERE id = ?", time.Now().UTC(), uId)
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Update last_login error:", err)
+		return
+	}
 	token, err := GenerateToken(username, uId)
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	now := time.Now().UTC()
+	database.Db.Exec("DELETE FROM active_sessions WHERE expires_at < ?", now)
+	expiresAt := now.Add(24 * time.Hour)
+	_, err = database.Db.Exec("INSERT INTO active_sessions (user_id, token, expires_at, last_seen) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at), last_seen = VALUES(last_seen)", uId, token, expiresAt, now)
+	if err != nil {
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		fmt.Println("Upsert active session error:", err)
+		return
 	}
 
 	// Set the auth token as a cookie with detailed settings for troubleshooting
@@ -116,8 +195,25 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Handle logout logic here
-	w.Write([]byte("Logout handler"))
+	token := ""
+	if authCookie, err := r.Cookie("auth_token"); err == nil {
+		token = authCookie.Value
+	}
+	if token == "" {
+		token = r.URL.Query().Get("auth")
+	}
+	if token != "" {
+		database.Db.Exec("DELETE FROM active_sessions WHERE token = ?", token)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:   "auth_token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+
+	w.Write([]byte("Logged out"))
 }
 
 func AuthCheck(w http.ResponseWriter, r *http.Request) *Claims {
@@ -168,6 +264,13 @@ func AuthCheck(w http.ResponseWriter, r *http.Request) *Claims {
 		return nil
 	}
 	fmt.Println("[AUTH] Auth successful for user ID:", claims.UID, "Username:", claims.Username)
+
+	now := time.Now().UTC()
+	expires := now.Add(24 * time.Hour)
+	if _, err := database.Db.Exec("UPDATE active_sessions SET last_seen = ?, expires_at = ? WHERE token = ?", now, expires, auth); err != nil {
+		fmt.Println("[AUTH] Failed to refresh active session:", err)
+	}
+
 	return claims
 }
 
@@ -176,3 +279,11 @@ func AddAuthListeners() {
 	http.HandleFunc("/auth/login", loginHandler)
 	http.HandleFunc("/auth/register", registerHandler)
 }
+
+
+
+
+
+
+
+

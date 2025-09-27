@@ -121,7 +121,68 @@ func getInventoryRootFolderAPI(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(response)
 }
 
+// getUserStorageInfo handles GET /api/user/storage
+func getUserStorageInfoAPI(w http.ResponseWriter, r *http.Request) {
+	claims := authentication.AuthCheck(w, r)
+	if claims == nil {
+		return
+	}
+
+	// Set JSON content type
+	w.Header().Set("Content-Type", "application/json")
+
+	// Get user's admin status
+	var isAdmin bool
+	var storageUsedMB float64
+	
+	// Get admin status
+	err := database.Db.QueryRow(`
+		SELECT is_admin 
+		FROM Users 
+		WHERE id = ?
+	`, claims.UID).Scan(&isAdmin)
+
+	if err != nil {
+		isAdmin = false
+	}
+
+	// Calculate actual storage used by this user (deduplicated)
+	err = database.Db.QueryRow(`
+		SELECT COALESCE(SUM(DISTINCT su.file_size_bytes) / 1048576.0, 0)
+		FROM storage_usage su
+		WHERE su.user_id = ?
+	`, claims.UID).Scan(&storageUsedMB)
+	
+	if err != nil {
+		// Fallback: calculate based on user's items and asset hashes
+		err = database.Db.QueryRow(`
+			SELECT COALESCE(SUM(DISTINCT a.file_size_bytes) / 1048576, 0)
+			FROM Items i
+			JOIN Folders f ON i.folder_id = f.id
+			JOIN Inventories inv ON f.inventory_id = inv.id
+			JOIN users_inventories ui ON inv.id = ui.inventory_id
+			JOIN `+"`hash-usage`"+` hu ON i.id = hu.item_id
+			JOIN Assets a ON hu.asset_id = a.id
+			WHERE ui.user_id = ?
+		`, claims.UID).Scan(&storageUsedMB)
+		
+		if err != nil {
+			// If we can't calculate, default to 0
+			storageUsedMB = 0
+		}
+	}
+
+	response := map[string]interface{}{
+		"success":         true,
+		"storage_used_mb": storageUsedMB,
+		"is_admin":        isAdmin,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
 // AddJSONAPIListeners registers the JSON API endpoints
 func AddJSONAPIListeners() {
 	http.HandleFunc("/api/inventory/rootFolder", getInventoryRootFolderAPI)
+	http.HandleFunc("/api/user/storage", getUserStorageInfoAPI)
 }

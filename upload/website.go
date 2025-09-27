@@ -43,6 +43,56 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join("upload-site", "login.html"))
 }
 
+// Handle the admin page
+func handleAdmin(w http.ResponseWriter, r *http.Request) {
+	// Check for auth token
+	var authToken string
+
+	// First try to get from cookie (preferred method)
+	authCookie, err := r.Cookie("auth_token")
+	if err == nil {
+		authToken = authCookie.Value
+	} else {
+		// Fallback to query parameter
+		authToken = r.URL.Query().Get("auth")
+	}
+
+	// Validate token
+	if authToken != "" {
+		claims, err := authentication.ParseToken(authToken)
+		if err == nil {
+			// Check if user is admin
+			var isAdmin bool
+			err = database.Db.QueryRow("SELECT is_admin FROM Users WHERE id = ?", claims.UID).Scan(&isAdmin)
+			if err == nil && isAdmin {
+				// Set cookie if it came from query param
+				if authCookie == nil && authToken != "" {
+					http.SetCookie(w, &http.Cookie{
+						Name:     "auth_token",
+						Value:    authToken,
+						Path:     "/",
+						MaxAge:   86400,
+						HttpOnly: false,
+						SameSite: http.SameSiteLaxMode,
+					})
+				}
+
+				// Add security headers
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Header().Set("Pragma", "no-cache")
+				w.Header().Set("Expires", "0")
+
+				// Serve admin dashboard
+				http.ServeFile(w, r, filepath.Join("upload-site", "admin.html"))
+				return
+			}
+		}
+	}
+
+	// Not authorized, redirect to dashboard
+	http.Redirect(w, r, "/dashboard", http.StatusFound)
+}
+
 // Handle the dashboard page
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	// Check for auth token
@@ -302,6 +352,7 @@ func StartWebServer() {
 	http.HandleFunc("/", logRequest(handleWebHome))
 	http.HandleFunc("/login", logRequest(handleLogin))
 	http.HandleFunc("/dashboard", logRequest(handleDashboard))
+	http.HandleFunc("/admin", logRequest(handleAdmin))
 	http.HandleFunc("/folder", logRequest(handleFolder))
 	http.HandleFunc("/logout", logRequest(handleLogout))
 
