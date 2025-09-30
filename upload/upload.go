@@ -234,7 +234,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			var id sql.NullInt64
 			err = database.Db.QueryRow("SELECT id FROM `Assets` WHERE `hash` = ?", filepath.Base(f.Name)).Scan(&id)
 			if err == sql.ErrNoRows {
-				assetInsertResult, err := database.Db.Exec("INSERT INTO `Assets` (`hash`) VALUES (?)", filepath.Base(f.Name))
+				// Insert new asset with file size
+				assetInsertResult, err := database.Db.Exec("INSERT INTO `Assets` (`hash`, `file_size_bytes`) VALUES (?, ?)", filepath.Base(f.Name), len(data))
 				if err == nil {
 					assetId, err := assetInsertResult.LastInsertId()
 					if err != nil {
@@ -242,17 +243,39 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 						fmt.Println("[UPLOAD] Failed to get last insert id on new hash:", err)
 						return
 					}
+					
+					// Link asset to item
 					_, err = database.Db.Exec("INSERT INTO `hash-usage` (`asset_id`, `item_id`) VALUES (?, ?)", assetId, itemId)
 					if err != nil {
 						http.Error(w, "Failed to link item to new asset", http.StatusInternalServerError)
 						fmt.Println("[UPLOAD] Failed to link item to new asset:", err)
+						return
+					}
+					
+					// Record storage usage for this user
+					_, err = database.Db.Exec("INSERT INTO `storage_usage` (`user_id`, `asset_hash`, `file_size_bytes`) VALUES (?, ?, ?)", claims.UID, filepath.Base(f.Name), len(data))
+					if err != nil {
+						fmt.Println("[UPLOAD] Warning: Failed to record storage usage:", err)
 					}
 				}
 			} else if err == nil && id.Valid {
+				// Asset already exists, just link it to the item
 				_, err := database.Db.Exec("INSERT INTO `hash-usage` (`asset_id`, `item_id`) VALUES (?, ?)", id.Int64, itemId)
 				if err != nil {
-					http.Error(w, "Failed to get last insert id on existing hash", http.StatusInternalServerError)
-					fmt.Println("[UPLOAD] Failed to get last insert id on existing hash:", err)
+					http.Error(w, "Failed to link item to existing asset", http.StatusInternalServerError)
+					fmt.Println("[UPLOAD] Failed to link item to existing asset:", err)
+					return
+				}
+				
+				// Check if this user already has this asset in their storage usage
+				var existingUsage int
+				err = database.Db.QueryRow("SELECT COUNT(*) FROM `storage_usage` WHERE `user_id` = ? AND `asset_hash` = ?", claims.UID, filepath.Base(f.Name)).Scan(&existingUsage)
+				if err == nil && existingUsage == 0 {
+					// User doesn't have this asset yet, record the storage usage
+					_, err = database.Db.Exec("INSERT INTO `storage_usage` (`user_id`, `asset_hash`, `file_size_bytes`) VALUES (?, ?, ?)", claims.UID, filepath.Base(f.Name), len(data))
+					if err != nil {
+						fmt.Println("[UPLOAD] Warning: Failed to record storage usage for existing asset:", err)
+					}
 				}
 			} else {
 				http.Error(w, "Failed to add asset id to DB", http.StatusInternalServerError)
