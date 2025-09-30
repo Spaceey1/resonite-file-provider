@@ -164,7 +164,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	database.Db.Exec("DELETE FROM active_sessions WHERE expires_at < ?", now)
 	expiresAt := now.Add(24 * time.Hour)
-	_, err = database.Db.Exec("INSERT INTO active_sessions (user_id, token, expires_at, last_seen) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at), last_seen = VALUES(last_seen)", uId, token, expiresAt, now)
+	_, err = database.Db.Exec("INSERT INTO active_sessions (user_id, expires_at, last_seen) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at), last_seen = VALUES(last_seen)", uId, expiresAt, now)
 	if err != nil {
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		fmt.Println("Upsert active session error:", err)
@@ -193,7 +193,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// Also return the token in the response body for non-browser clients
 	w.Write([]byte(token))
 }
-
+// TODO: fix the logout handler to not need the use of the token database line for security
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	token := ""
 	if authCookie, err := r.Cookie("auth_token"); err == nil {
@@ -201,9 +201,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if token == "" {
 		token = r.URL.Query().Get("auth")
-	}
-	if token != "" {
-		database.Db.Exec("DELETE FROM active_sessions WHERE token = ?", token)
 	}
 
 	http.SetCookie(w, &http.Cookie{

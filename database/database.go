@@ -162,7 +162,7 @@ func ensureActiveSessionsTable(db *sql.DB) error {
 	createStmt := `CREATE TABLE IF NOT EXISTS active_sessions (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		user_id INT NOT NULL,
-		token VARCHAR(512) NOT NULL,
+
 		expires_at DATETIME NOT NULL,
 		last_seen DATETIME NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
