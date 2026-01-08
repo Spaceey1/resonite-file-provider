@@ -577,13 +577,13 @@ func handleRemoveInventory(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[INVENTORY] Successfully removed folder ID:", inventoryId)
 }
 
-func MakeAssetPublic(assetId int) error {
-       _, err := database.Db.Exec("UPDATE `Assets` SET `isPublic` = b'1' WHERE `Assets`.`id` = ?;", assetId)
+func MakeAssetPublic(itemId int) error {
+       _, err := database.Db.Exec("UPDATE `Items` SET `isPublic` = b'1' WHERE `id` = ?;", itemId)
        return err;
 }
 
-func MakeAssetPrivate(assetId int) error {
-       _, err := database.Db.Exec("UPDATE `Assets` SET `isPublic` = b'0' WHERE `Assets`.`id` = ?;", assetId)
+func MakeAssetPrivate(itemId int) error {
+       _, err := database.Db.Exec("UPDATE `Items` SET `isPublic` = b'0' WHERE `id` = ?;", itemId)
        return err;
 }
 func HandleChangeItemVisibility(w http.ResponseWriter, r *http.Request){
@@ -612,15 +612,14 @@ func HandleChangeItemVisibility(w http.ResponseWriter, r *http.Request){
                http.Error(w, "Forbidden", http.StatusForbidden)
                return
        }
-       var assetId int
-       database.Db.QueryRow("SELECT id FROM Assets where hash = (SELECT url from Items where id = ? LIMIT 1)").Scan(&assetId)
        if visibility{
-               err = MakeAssetPublic(assetId)
+               err = MakeAssetPublic(itemId)
        }else{
-               err = MakeAssetPrivate(assetId)
+               err = MakeAssetPrivate(itemId)
        }
        if err != nil {
                http.Error(w, "Internal server error", http.StatusInternalServerError)
+	       fmt.Println("[INVENTORY] ", err)
                return
        }
 }
