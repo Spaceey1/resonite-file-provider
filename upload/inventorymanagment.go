@@ -236,7 +236,22 @@ func handleAddInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func RemoveItem(itemId int) error {
+	// Get the user ID for this item to clean up storage usage
+	var userId int
+	err := database.Db.QueryRow(`
+		SELECT ui.user_id 
+		FROM Items i
+		JOIN Folders f ON i.folder_id = f.id
+		JOIN Inventories inv ON f.inventory_id = inv.id
+		JOIN users_inventories ui ON inv.id = ui.inventory_id
+		WHERE i.id = ?
+	`, itemId).Scan(&userId)
+	if err != nil {
+		return err
+	}
+
 	var affectedAssetIds []int
+	var affectedAssetHashes []string
 	rows, err := database.Db.Query("SELECT asset_id FROM `hash-usage` WHERE item_id = ?", itemId)
 	if err != nil {
 		return err
@@ -244,6 +259,14 @@ func RemoveItem(itemId int) error {
 	for rows.Next() {
 		var assetId int
 		rows.Scan(&assetId)
+		
+		// Get the asset hash for storage cleanup
+		var assetHash string
+		err := database.Db.QueryRow("SELECT hash FROM `Assets` WHERE id = ?", assetId).Scan(&assetHash)
+		if err != nil {
+			return err
+		}
+		
 		duplicate, err := database.Db.Query("SELECT item_id FROM `hash-usage` WHERE asset_id = ?", assetId)
 		if err != nil {
 			return err
@@ -254,23 +277,34 @@ func RemoveItem(itemId int) error {
 		}
 		if i <= 1 {
 			affectedAssetIds = append(affectedAssetIds, assetId)
+			affectedAssetHashes = append(affectedAssetHashes, assetHash)
 		}
 	}
+	
+	// Delete the item and its hash usage
 	_, err = database.Db.Exec("DELETE FROM `hash-usage` WHERE item_id = ?", itemId)
 	_, err = database.Db.Exec("DELETE FROM Items WHERE id = ?", itemId)
-	for _, affectedId := range affectedAssetIds {
-		var assetHash string
-		err := database.Db.QueryRow("SELECT hash FROM `Assets` WHERE ID = ?", affectedId).Scan(&assetHash)
-		if err != nil {
-			return err
-		}
+	
+	// Clean up assets and storage usage
+	for i, affectedId := range affectedAssetIds {
+		assetHash := affectedAssetHashes[i]
+		
 		var deleteAsset bool
 		err = database.Db.QueryRow("SELECT NOT EXISTS(SELECT 1 FROM `hash-usage` WHERE `asset_id` = ?)", affectedId).Scan(&deleteAsset)
 		if deleteAsset {
-			_, err := database.Db.Exec("DELETE FROM `Assets` WHERE id = ?", affectedId)
+			// Delete from storage_usage table for this user and asset
+			_, err := database.Db.Exec("DELETE FROM `storage_usage` WHERE user_id = ? AND asset_hash = ?", userId, assetHash)
+			if err != nil {
+				fmt.Printf("Warning: Failed to clean up storage usage for user %d, asset %s: %v\n", userId, assetHash, err)
+			}
+			
+			// Delete the asset
+			_, err = database.Db.Exec("DELETE FROM `Assets` WHERE id = ?", affectedId)
 			if err != nil {
 				return err
 			}
+			
+			// Delete the physical files
 			os.Remove(filepath.Join(config.GetConfig().Server.AssetsPath, assetHash))
 			os.Remove(filepath.Join(config.GetConfig().Server.AssetsPath, assetHash) + ".brson")
 		}
